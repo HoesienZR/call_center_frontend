@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, Phone, User, CheckCircle, Search } from 'lucide-react';
+import {ArrowLeft, Phone, User, CheckCircle, Search, XCircle} from 'lucide-react';
 import { API_BASE_URL } from '@/config.js';
 
 const CallRequest = () => {
@@ -15,6 +15,7 @@ const CallRequest = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isAdminOrCreator, setIsAdminOrCreator] = useState(false);
+    const [isCaller, setIsCaller] = useState(false); // New state for caller role
     const [currentContactIndex, setCurrentContactIndex] = useState(0);
     const [currentUser, setCurrentUser] = useState(null);
     const [error, setError] = useState(null);
@@ -53,15 +54,27 @@ const CallRequest = () => {
                     'Content-Type': 'application/json',
                 },
             });
-            const user_response = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
+            const userResponse = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
                 headers: { 'Authorization': `Token ${token}` },
             });
-            const user_data = await user_response.json();
+            const userData = await userResponse.json();
             const data = await response.json();
-            console.log('Project Data:', data, 'User Data:', user_data);
-            if (data.created_by.id === user_data.id || user_data.is_staff === true) {
+            console.log('Project Data:', data, 'User Data:', userData);
+
+            // Check if user is admin, creator, or caller
+            console.log(data)
+            console.log(userData)
+            if (data.created_by.id === userData.id || userData.is_staff) {
                 setIsAdminOrCreator(true);
             }
+            // Assuming userData.roles is an array or field indicating roles
+            // Adjust the condition based on your backend's role structure
+            console.log(userData.profile.role)
+            if (userData.profile.role && userData.profile.role.includes('caller')) {
+                console.log("set To True")
+                setIsCaller(true);
+            }
+
         } catch (error) {
             console.error('Error fetching user role:', error);
             setError('خطا در بررسی نقش کاربر.');
@@ -137,8 +150,6 @@ const CallRequest = () => {
                 const errorData = await response.json();
                 throw new Error(errorData.detail || `Failed to skip contact: ${response.status}`);
             }
-            const data = await response.json();
-            console.log('Skip Contact Response:', data);
             await fetchContacts();
         } catch (error) {
             console.error('Error skipping contact:', error);
@@ -156,9 +167,10 @@ const CallRequest = () => {
         } else if (!/^\+?\d{10,15}$/.test(newContact.phone.trim())) {
             errors.phone = 'شماره تلفن معتبر نیست';
         }
-        if (!newContact.assigned_caller_id.trim()) {
+        // Only validate assigned_caller_id if user is not a caller
+        if (!isCaller && !newContact.assigned_caller_id.trim()) {
             errors.assigned_caller_id = 'شناسه تماس‌گیرنده الزامی است';
-        } else if (isNaN(parseInt(newContact.assigned_caller_id))) {
+        } else if (!isCaller && isNaN(parseInt(newContact.assigned_caller_id))) {
             errors.assigned_caller_id = 'شناسه تماس‌گیرنده باید یک عدد معتبر باشد';
         }
         if (newContact.custom_fields) {
@@ -195,7 +207,8 @@ const CallRequest = () => {
                 full_name: newContact.full_name.trim(),
                 phone: newContact.phone.trim(),
                 address: newContact.address ? newContact.address.trim() : '',
-                assigned_caller_id: parseInt(newContact.assigned_caller_id),
+                // Set assigned_caller_id to currentUser.id for callers, otherwise use form input
+                assigned_caller_id: isCaller ? currentUser.id : parseInt(newContact.assigned_caller_id),
                 custom_fields: newContact.custom_fields ? JSON.parse(newContact.custom_fields || '{}') : {},
             };
 
@@ -243,6 +256,28 @@ const CallRequest = () => {
         console.log('Contact:', contact, 'Matches Search:', matchesSearch);
         return matchesSearch;
     });
+    console.log(isCaller)
+    // Check if user is neither admin, creator, nor caller
+    if (!isAdminOrCreator && !isCaller && currentUser) {
+
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                <Card className="max-w-md">
+                    <CardContent className="p-6 text-center">
+                        <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                        <p className="text-lg font-medium text-gray-900">{error}</p>
+                        <Button
+                            onClick={() => navigate(`/project/${projectId}`)}
+                            className="mt-4 bg-blue-600 hover:bg-blue-700"
+                        >
+                            <ArrowLeft className="w-4 h-4 ml-2" />
+                            بازگشت به پروژه
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     if (loading || !currentUser) {
         return (
@@ -274,7 +309,7 @@ const CallRequest = () => {
                                 <h1 className="mr-4 text-xl font-semibold text-gray-900">لیست درخواست‌های تماس</h1>
                             </div>
                         </div>
-                        {isAdminOrCreator && (
+                        {(isAdminOrCreator || isCaller) && (
                             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button className="bg-blue-600 hover:bg-blue-700 px-8 py-3">
@@ -319,21 +354,23 @@ const CallRequest = () => {
                                                 onChange={(e) => setNewContact({ ...newContact, address: e.target.value })}
                                             />
                                         </div>
+                                        {!isCaller && ( // Conditionally render assigned_caller_id field
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-500">شناسه تماس‌گیرنده</label>
+                                                <Input
+                                                    value={newContact.assigned_caller_id}
+                                                    onChange={(e) => setNewContact({ ...newContact, assigned_caller_id: e.target.value })}
+                                                    required
+                                                    type="number"
+                                                    className={formErrors.assigned_caller_id ? 'border-red-500' : ''}
+                                                />
+                                                {formErrors.assigned_caller_id && (
+                                                    <p className="text-red-500 text-xs mt-1">{formErrors.assigned_caller_id}</p>
+                                                )}
+                                            </div>
+                                        )}
                                         <div>
-                                            <label className="text-sm font-medium text-gray-500">شناسه تماس‌گیرنده</label>
-                                            <Input
-                                                value={newContact.assigned_caller_id}
-                                                onChange={(e) => setNewContact({ ...newContact, assigned_caller_id: e.target.value })}
-                                                required
-                                                type="number"
-                                                className={formErrors.assigned_caller_id ? 'border-red-500' : ''}
-                                            />
-                                            {formErrors.assigned_caller_id && (
-                                                <p className="text-red-500 text-xs mt-1">{formErrors.assigned_caller_id}</p>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="text-sm font-medium text-gray-500">فیلدهای سفارشی </label>
+                                            <label className="text-sm font-medium text-gray-500">فیلدهای سفارشی</label>
                                             <Input
                                                 value={newContact.custom_fields}
                                                 onChange={(e) => setNewContact({ ...newContact, custom_fields: e.target.value })}
@@ -422,29 +459,29 @@ const CallRequest = () => {
                                     <div>
                                         <span className="text-sm font-medium text-gray-500">شماره تلفن: </span>
                                         <span className="text-gray-900 font-mono" dir="ltr">
-                      {filteredContacts[currentContactIndex].phone}
-                    </span>
+                                            {filteredContacts[currentContactIndex].phone}
+                                        </span>
                                     </div>
                                     {filteredContacts[currentContactIndex].address && (
                                         <div>
                                             <span className="text-sm font-medium text-gray-500">آدرس: </span>
                                             <span className="text-gray-900">
-                        {filteredContacts[currentContactIndex].address}
-                      </span>
+                                                {filteredContacts[currentContactIndex].address}
+                                            </span>
                                         </div>
                                     )}
                                     <div>
                                         <span className="text-sm font-medium text-gray-500">شناسه تماس‌گیرنده: </span>
                                         <span className="text-gray-900">
-                      {filteredContacts[currentContactIndex].id || 'تخصیص نشده'}
-                    </span>
+                                            {filteredContacts[currentContactIndex].id || 'تخصیص نشده'}
+                                        </span>
                                     </div>
                                     {filteredContacts[currentContactIndex].custom_fields && (
                                         <div>
                                             <span className="text-sm font-medium text-gray-500">فیلدهای سفارشی: </span>
                                             <span className="text-gray-900">
-                        {filteredContacts[currentContactIndex].custom_fields || 'ندارد'}
-                      </span>
+                                                {filteredContacts[currentContactIndex].custom_fields || 'ندارد'}
+                                            </span>
                                         </div>
                                     )}
                                     <div className="mt-6 flex justify-center space-x-2 space-x-reverse">

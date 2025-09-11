@@ -80,16 +80,12 @@ const Dashboard = () => {
     navigate('/login');
   };
 
-  const handleNewCall = () => {
-    navigate('/call-request');
-  };
-
   const handleProjects = () => {
     navigate('/projects');
   };
 
-  const handleReports = () => {
-    navigate('/reports');
+  const handleUsers = () => {
+    navigate('/users');
   };
 
   if (!user) {
@@ -152,7 +148,7 @@ const Dashboard = () => {
                   خوش آمدید به سیستم مدیریت مرکز تماس
                 </h2>
                 <p className="text-gray-600">
-                  از این داشبورد می‌توانید {hasProjectAccess && 'پروژه‌های تماس خود را مدیریت کنید،'} تماس‌های جدید درخواست دهید و گزارش‌های مفصل دریافت کنید.
+                  از این داشبورد می‌توانید {hasProjectAccess && 'پروژه‌های تماس خود را مدیریت کنید و'} کاربران را مشاهده و مدیریت کنید.
                 </p>
               </div>
             </div>
@@ -257,24 +253,7 @@ const Dashboard = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className={`grid grid-cols-1 md:grid-cols-${hasProjectAccess ? '3' : '2'} gap-6`}>
-              <button
-                  onClick={handleNewCall}
-                  className="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:-translate-y-1"
-              >
-                <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-4">
-                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">درخواست تماس جدید</h3>
-                  <p className="text-blue-100 text-sm text-center">
-                    برای شروع تماس جدید کلیک کنید
-                  </p>
-                </div>
-              </button>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {hasProjectAccess && (
                   <button
                       onClick={handleProjects}
@@ -293,20 +272,19 @@ const Dashboard = () => {
                     </div>
                   </button>
               )}
-
               <button
-                  onClick={handleReports}
-                  className="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:-translate-y-1"
+                  onClick={handleUsers}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white p-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:-translate-y-1"
               >
                 <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center mb-4">
                     <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">گزارش‌ها</h3>
-                  <p className="text-purple-100 text-sm text-center">
-                    مشاهده گزارش‌های تفصیلی
+                  <h3 className="text-lg font-semibold mb-2">مدیریت کاربران</h3>
+                  <p className="text-indigo-100 text-sm text-center">
+                    مشاهده و مدیریت کاربران سیستم
                   </p>
                 </div>
               </button>

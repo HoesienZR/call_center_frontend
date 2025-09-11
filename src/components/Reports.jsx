@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ArrowLeft, BarChart3, Download, Calendar, Users, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { API_BASE_URL } from "@/config.js";
-import moment from 'jalali-moment'; // وارد کردن jalali-moment
+import moment from 'jalali-moment';
 
 const Reports = () => {
     const navigate = useNavigate();
@@ -13,6 +13,7 @@ const Reports = () => {
     const [reports, setReports] = useState(null);
     const [calls, setCalls] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null); // New state for handling errors
     const [dateRange, setDateRange] = useState({
         start_date: '',
         end_date: ''
@@ -48,6 +49,9 @@ const Reports = () => {
             );
 
             if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error('شما به این صفحه دسترسی ندارید');
+                }
                 throw new Error('Failed to fetch data');
             }
 
@@ -56,8 +60,10 @@ const Reports = () => {
             setReports(data.reports || null);
             setProject(data.project || null);
             setCalls(Array.isArray(data.calls) ? data.calls : []);
+            setError(null); // Clear any previous error
         } catch (error) {
             console.error('Error fetching data:', error);
+            setError(error.message); // Set error message
             setCalls([]);
         } finally {
             setLoading(false);
@@ -115,6 +121,26 @@ const Reports = () => {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="mt-4 text-gray-600">در حال بارگذاری...</p>
                 </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+                <Card className="max-w-md">
+                    <CardContent className="p-6 text-center">
+                        <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                        <p className="text-lg font-medium text-gray-900">{error}</p>
+                        <Button
+                            onClick={() => navigate(`/project/${projectId}`)}
+                            className="mt-4 bg-blue-600 hover:bg-blue-700"
+                        >
+                            <ArrowLeft className="w-4 h-4 ml-2" />
+                            بازگشت به پروژه
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
@@ -340,8 +366,8 @@ const Reports = () => {
                                                     <div className="flex items-center">
                                                         {getStatusIcon(call.call_result)}
                                                         <span className="mr-2 text-sm text-gray-900">
-                                {getStatusLabel(call.call_result)}
-                              </span>
+                                                            {getStatusLabel(call.call_result)}
+                                                        </span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
