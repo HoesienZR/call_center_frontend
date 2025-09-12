@@ -12,12 +12,8 @@ export default defineConfig({
     },
   },
   server: {
-    host: true,
+    host: '0.0.0.0',
     port: 5173,
-    allowedHosts: [
-      '192.168.20.28', // IP مورد نظر شما
-      'localhost', // اگر می‌خواهید localhost هم کار کند، این را اضافه کنید
-      '127.0.0.1'
-    ]
+    allowedHosts: 'all'
   }
 })
