@@ -11,6 +11,7 @@ import Reports from './components/Reports';
 import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 
+
 function App() {
   return (
       <Router>
@@ -26,7 +27,7 @@ function App() {
             <Route path="/project/:projectId/call-feedback/:contactId" element={<CallFeedback />} />
             <Route path="/project/:projectId/reports" element={<Reports />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/users" element={<UserList />} />
+            <Route path="/users/:projectId" element={<UserList />} />
             <Route path="/" element={<Navigate to="/login" replace />} />
           </Routes>
         </div>
@@ -36,5 +37,5 @@ function App() {
 
 export default App;
 
-import UserList from './components/UserList';
+import UserList from './components/ProjectCreatorUserList.jsx';
 

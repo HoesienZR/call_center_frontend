@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, MessageSquare, CheckCircle, XCircle, Clock, Phone, User } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 const CallFeedback = () => {
@@ -22,21 +22,16 @@ const CallFeedback = () => {
   });
 
   const callStatuses = [
-    { value: 'pending', label: 'در انتظار', icon: Clock, color: 'text-yellow-600' },
-    { value: 'in_progress', label: 'در حال انجام', icon: Clock, color: 'text-blue-600' },
-    { value: 'completed', label: 'تکمیل شده', icon: CheckCircle, color: 'text-green-600' },
-    { value: 'follow_up', label: 'نیاز به پیگیری', icon: Clock, color: 'text-yellow-600' },
-    { value: 'cancelled', label: 'لغو شده', icon: XCircle, color: 'text-red-600' },
+    { value: 'answered', label: 'پاسخ داد' },
+    { value: 'pending', label: 'در انتظار' },
+    { value: 'no_answer', label: 'پاسخ نداد' },
+    { value: 'wrong_number', label: 'شماره اشتباه' },
   ];
 
   const callResults = [
-    { value: 'answered', label: 'پاسخ داد' },
-    { value: 'no_answer', label: 'پاسخ نداد' },
-    { value: 'busy', label: 'مشغول' },
-    { value: 'unreachable', label: 'در دسترس نیست' },
-    { value: 'wrong_number', label: 'شماره اشتباه' },
+    { value: 'interested', label: 'علاقه‌مند هست' },
+    { value: 'no_time', label: 'وقت ندارد' },
     { value: 'not_interested', label: 'علاقه‌مند نیست' },
-    { value: 'callback_requested', label: 'درخواست تماس مجدد' },
   ];
 
   useEffect(() => {
@@ -84,17 +79,17 @@ const CallFeedback = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/api/contacts/${contactId}/submit_call_feedback/`, {
+      const response = await fetch(`${API_BASE_URL}/api/calls/submit_call/`,  {
         method: 'POST',
         headers: {
           'Authorization': `Token ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contact_id: contactId,
+          callecaller_id: contactId,  // این فیلد اشتباه نام‌گذاری شده!
           project_id: projectId,
           status: feedback.status,
-          result: feedback.result,
+          call_result: feedback.result,
           notes: feedback.notes,
           follow_up_date: follow_up_date,
           follow_up_notes: feedback.follow_up_notes,
@@ -119,7 +114,18 @@ const CallFeedback = () => {
   };
 
   const handleInputChange = (field, value) => {
-    setFeedback(prev => ({ ...prev, [field]: value }));
+    setFeedback(prev => {
+      const newFeedback = { ...prev, [field]: value };
+
+      // اگر وضعیت تماس تغییر کرد و به غیر از "answered" انتخاب شد، نتیجه تماس را پاک کن
+      if (field === 'status' && value !== 'answered') {
+        newFeedback.result = '';
+        newFeedback.follow_up_date = '';
+        newFeedback.follow_up_notes = '';
+      }
+
+      return newFeedback;
+    });
   };
 
   if (loading) {
@@ -201,49 +207,47 @@ const CallFeedback = () => {
                       وضعیت تماس
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {callStatuses.map((status) => {
-                        const IconComponent = status.icon;
-                        return (
-                            <button
-                                key={status.value}
-                                type="button"
-                                onClick={() => handleInputChange('status', status.value)}
-                                className={`p-3 border rounded-lg text-center transition-colors ${
-                                    feedback.status === status.value
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-300 hover:border-gray-400'
-                                }`}
-                            >
-                              <IconComponent className={`w-6 h-6 mx-auto mb-2 ${status.color}`} />
-                              <span className="text-sm font-medium">{status.label}</span>
-                            </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Call Result */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      نتیجه تماس
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {callResults.map((result) => (
+                      {callStatuses.map((status) => (
                           <button
-                              key={result.value}
+                              key={status.value}
                               type="button"
-                              onClick={() => handleInputChange('result', result.value)}
+                              onClick={() => handleInputChange('status', status.value)}
                               className={`p-3 border rounded-lg text-center transition-colors ${
-                                  feedback.result === result.value
-                                      ? 'border-green-500 bg-green-50'
+                                  feedback.status === status.value
+                                      ? 'border-blue-500 bg-blue-50'
                                       : 'border-gray-300 hover:border-gray-400'
                               }`}
                           >
-                            <span className="text-sm font-medium">{result.label}</span>
+                            <span className="text-sm font-medium">{status.label}</span>
                           </button>
                       ))}
                     </div>
                   </div>
+
+                  {/* Call Result - فقط زمانی که وضعیت "پاسخ داد" باشد نمایش داده شود */}
+                  {feedback.status === 'answered' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          نتیجه تماس
+                        </label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {callResults.map((result) => (
+                              <button
+                                  key={result.value}
+                                  type="button"
+                                  onClick={() => handleInputChange('result', result.value)}
+                                  className={`p-3 border rounded-lg text-center transition-colors ${
+                                      feedback.result === result.value
+                                          ? 'border-green-500 bg-green-50'
+                                          : 'border-gray-300 hover:border-gray-400'
+                                  }`}
+                              >
+                                <span className="text-sm font-medium">{result.label}</span>
+                              </button>
+                          ))}
+                        </div>
+                      </div>
+                  )}
 
                   {/* Notes */}
                   <div>
@@ -259,18 +263,20 @@ const CallFeedback = () => {
                     />
                   </div>
 
-                  {/* Duration */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      مدت زمان تماس (ثانیه)
-                    </label>
-                    <Input
-                        type="number"
-                        value={feedback.duration}
-                        onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 0)}
-                        placeholder="مدت زمان تماس به ثانیه"
-                    />
-                  </div>
+                  {/* Duration - فقط زمانی که وضعیت "پاسخ داد" باشد نمایش داده شود */}
+                  {feedback.status === 'answered' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          مدت زمان تماس (ثانیه)
+                        </label>
+                        <Input
+                            type="number"
+                            value={feedback.duration}
+                            onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 0)}
+                            placeholder="مدت زمان تماس به ثانیه"
+                        />
+                      </div>
+                  )}
 
                   {/* Follow-up */}
                   {feedback.result === 'callback_requested' && (
@@ -312,7 +318,7 @@ const CallFeedback = () => {
                     <Button
                         type="submit"
                         className="bg-purple-600 hover:bg-purple-700"
-                        disabled={!feedback.status || !feedback.result || submitting}
+                        disabled={!feedback.status || (feedback.status === 'answered' && !feedback.result) || submitting}
                     >
                       {submitting ? 'در حال ثبت...' : 'ثبت بازخورد'}
                     </Button>

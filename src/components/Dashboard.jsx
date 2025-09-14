@@ -57,7 +57,7 @@ const Dashboard = () => {
 
       const callsData = await callsResponse.json();
       const calls = callsData.results || callsData;
-      const completedCalls = calls.filter(call => call.status === 'completed').length;
+      const completedCalls = calls.filter((call) => call.status === 'completed').length;
 
       setStats({
         totalProjects: projects.results.length,
@@ -84,16 +84,12 @@ const Dashboard = () => {
     navigate('/projects');
   };
 
-  const handleUsers = () => {
-    navigate('/users');
-  };
-
   if (!user) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">در حال بارگذاری...</p>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-sm text-gray-600">در حال بارگذاری...</p>
           </div>
         </div>
     );
@@ -104,8 +100,8 @@ const Dashboard = () => {
         {/* Header */}
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-center h-auto sm:h-16 py-4 sm:py-0">
+              <div className="flex items-center mb-4 sm:mb-0">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -114,22 +110,22 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <div className="mr-4">
-                  <h1 className="text-xl font-semibold text-gray-900">مرکز تماس</h1>
+                  <h1 className="text-lg sm:text-xl font-semibold text-gray-900">مرکز تماس</h1>
                 </div>
               </div>
-              <div className="flex items-center space-x-4 space-x-reverse">
-                <span className="text-sm text-gray-700">خوش آمدید، {user.username}</span>
+              <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
+                <span className="text-sm text-gray-700 truncate max-w-xs">{user.username} ،خوش آمدید</span>
                 {user.is_staff && (
                     <button
                         onClick={handleAdminDashboard}
-                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                        className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
                     >
                       داشبورد مدیریت
                     </button>
                 )}
                 <button
                     onClick={handleLogout}
-                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
                 >
                   خروج
                 </button>
@@ -139,24 +135,24 @@ const Dashboard = () => {
         </header>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
+        <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
             {/* Welcome Section */}
             <div className="bg-white overflow-hidden shadow rounded-lg mb-6">
               <div className="px-4 py-5 sm:p-6">
-                <h2 className="text-lg font-medium text-gray-900 mb-2">
+                <h2 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
                   خوش آمدید به سیستم مدیریت مرکز تماس
                 </h2>
-                <p className="text-gray-600">
-                  از این داشبورد می‌توانید {hasProjectAccess && 'پروژه‌های تماس خود را مدیریت کنید و'} کاربران را مشاهده و مدیریت کنید.
+                <p className="text-sm sm:text-base text-gray-600">
+                  {hasProjectAccess ? 'از این داشبورد می‌توانید پروژه‌های تماس خود را مدیریت کنید.' : 'لطفاً برای دسترسی به پروژه‌ها با مدیر تماس بگیرید.'}
                 </p>
               </div>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
               <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -165,14 +161,10 @@ const Dashboard = () => {
                         </svg>
                       </div>
                     </div>
-                    <div className="mr-5 w-0 flex-1">
+                    <div className="mr-4 sm:mr-5 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                          کل پروژه‌ها
-                        </dt>
-                        <dd className="text-lg font-medium text-gray-900">
-                          {stats.totalProjects}
-                        </dd>
+                        <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">کل پروژه‌ها</dt>
+                        <dd className="text-base sm:text-lg font-medium text-gray-900">{stats.totalProjects}</dd>
                       </dl>
                     </div>
                   </div>
@@ -180,7 +172,7 @@ const Dashboard = () => {
               </div>
 
               <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
@@ -189,14 +181,10 @@ const Dashboard = () => {
                         </svg>
                       </div>
                     </div>
-                    <div className="mr-5 w-0 flex-1">
+                    <div className="mr-4 sm:mr-5 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                          کل تماس‌ها
-                        </dt>
-                        <dd className="text-lg font-medium text-gray-900">
-                          {stats.totalCalls}
-                        </dd>
+                        <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">کل تماس‌ها</dt>
+                        <dd className="text-base sm:text-lg font-medium text-gray-900">{stats.totalCalls}</dd>
                       </dl>
                     </div>
                   </div>
@@ -204,7 +192,7 @@ const Dashboard = () => {
               </div>
 
               <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
@@ -213,14 +201,10 @@ const Dashboard = () => {
                         </svg>
                       </div>
                     </div>
-                    <div className="mr-5 w-0 flex-1">
+                    <div className="mr-4 sm:mr-5 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                          تماس‌های انجام شده
-                        </dt>
-                        <dd className="text-lg font-medium text-gray-900">
-                          {stats.completedCalls}
-                        </dd>
+                        <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">تماس‌های انجام شده</dt>
+                        <dd className="text-base sm:text-lg font-medium text-gray-900">{stats.completedCalls}</dd>
                       </dl>
                     </div>
                   </div>
@@ -228,7 +212,7 @@ const Dashboard = () => {
               </div>
 
               <div className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="p-5">
+                <div className="p-4 sm:p-5">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
@@ -237,14 +221,10 @@ const Dashboard = () => {
                         </svg>
                       </div>
                     </div>
-                    <div className="mr-5 w-0 flex-1">
+                    <div className="mr-4 sm:mr-5 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
-                          تماس‌های در انتظار
-                        </dt>
-                        <dd className="text-lg font-medium text-gray-900">
-                          {stats.pendingCalls}
-                        </dd>
+                        <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">تماس‌های در انتظار</dt>
+                        <dd className="text-base sm:text-lg font-medium text-gray-900">{stats.pendingCalls}</dd>
                       </dl>
                     </div>
                   </div>
@@ -253,41 +233,25 @@ const Dashboard = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
               {hasProjectAccess && (
                   <button
                       onClick={handleProjects}
-                      className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:-translate-y-1"
+                      className="bg-green-600 hover:bg-green-700 text-white p-4 sm:p-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:-translate-y-1"
                   >
                     <div className="flex flex-col items-center">
-                      <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-4">
-                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center mb-3 sm:mb-4">
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                         </svg>
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">مدیریت پروژه‌ها</h3>
-                      <p className="text-green-100 text-sm text-center">
+                      <h3 className="text-base sm:text-lg font-semibold mb-2">مدیریت پروژه‌ها</h3>
+                      <p className="text-green-100 text-xs sm:text-sm text-center">
                         مشاهده و مدیریت پروژه‌های تماس
                       </p>
                     </div>
                   </button>
               )}
-              <button
-                  onClick={handleUsers}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white p-6 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:-translate-y-1"
-              >
-                <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center mb-4">
-                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">مدیریت کاربران</h3>
-                  <p className="text-indigo-100 text-sm text-center">
-                    مشاهده و مدیریت کاربران سیستم
-                  </p>
-                </div>
-              </button>
             </div>
           </div>
         </main>
