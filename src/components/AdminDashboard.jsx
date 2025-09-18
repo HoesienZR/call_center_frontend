@@ -3,18 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, BarChart3, Users, Phone, TrendingUp, Calendar, Download, Settings } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
-import { API_BASE_URL } from "@/config.js";
-
-// Import Excel export functions
 import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+
+import { API_BASE_URL } from '../config';
 
 // Persian Date Conversion Utility
 const gregorianToPersian = (gregorianDate) => {
-    // Helper function to convert Gregorian date to Persian (Jalali) date
     const date = new Date(gregorianDate);
     let gYear = date.getFullYear();
-    let gMonth = date.getMonth() + 1; // JavaScript months are 0-based
+    let gMonth = date.getMonth() + 1;
     let gDay = date.getDate();
 
     // Simple approximation for Gregorian to Persian conversion
@@ -33,14 +30,13 @@ const gregorianToPersian = (gregorianDate) => {
         pMonth = gMonth - 3;
     }
 
-    // Adjust for day differences (simplified, not accounting for all edge cases)
+    // Adjust for day differences
     if (gMonth <= 3 && gDay > 20) {
         pDay = gDay - 20;
     } else if (gMonth > 3 && gDay > 21) {
         pDay = gDay - 21;
     }
 
-    // Format as YYYY/MM/DD
     return `${pYear}/${pMonth.toString().padStart(2, '0')}/${pDay.toString().padStart(2, '0')}`;
 };
 
@@ -48,7 +44,7 @@ const gregorianToPersian = (gregorianDate) => {
 const PersianDatePicker = ({ value, onChange, placeholder, label }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [currentPersianYear, setCurrentPersianYear] = useState(1403);
-    const [currentPersianMonth, setCurrentPersianMonth] = useState(6); // مهر
+    const [currentPersianMonth, setCurrentPersianMonth] = useState(6);
 
     const persianMonths = [
         'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
@@ -209,76 +205,85 @@ const PersianDatePicker = ({ value, onChange, placeholder, label }) => {
 
 // Main AdminDashboard Component
 const AdminDashboard = () => {
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [dashboardData, setDashboardData] = useState(null);
     const [dateRange, setDateRange] = useState({
         start_date: '',
         end_date: ''
     });
 
-    // Excel Export Functions
-    const exportCallerPerformanceToExcel = (callerData, projectName = 'همه پروژه‌ها') => {
+    // Excel Export Function
+    const exportToExcel = (data, fileName, sheetName) => {
         try {
-            // آماده‌سازی داده‌ها برای اکسل
-            const worksheetData = callerData.map((caller, index) => ({
-                'ردیف': index + 1,
-                'نام تماس‌گیرنده': caller.name || caller.caller_full_name || 'نامشخص',
-                'نام کاربری': caller.username || caller.caller_username || 'نامشخص',
-                'نام پروژه': caller.project_name || projectName,
-                'تعداد کل تماس‌ها': caller.total_calls || 0,
-                'تماس‌های پاسخ داده شده': caller.successful_calls || caller.answered_calls || 0,
-                'نرخ موفقیت (درصد)': `${caller.success_rate || 0}%`,
-                'مدت کل تماس‌ها (دقیقه)': Math.round((caller.total_duration || caller.total_duration_seconds || 0) / 60),
-                'میانگین مدت تماس (دقیقه)': caller.avg_duration || Math.round((caller.average_call_duration_seconds || 0) / 60) || 0,
-                'مدت کل تماس‌ها (ثانیه)': caller.total_duration_seconds || caller.total_duration || 0,
-                'میانگین مدت تماس (ثانیه)': caller.average_call_duration_seconds || (caller.avg_duration * 60) || 0
-            }));
-
-            // ایجاد workbook و worksheet
             const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(worksheetData);
+            const ws = XLSX.utils.json_to_sheet(data);
 
-            // تنظیم عرض ستون‌ها
-            const colWidths = [
-                { wch: 8 },   // ردیف
-                { wch: 20 },  // نام تماس‌گیرنده
-                { wch: 15 },  // نام کاربری
-                { wch: 20 },  // نام پروژه
-                { wch: 15 },  // تعداد کل تماس‌ها
-                { wch: 20 },  // تماس‌های پاسخ داده شده
-                { wch: 18 },  // نرخ موفقیت
-                { wch: 22 },  // مدت کل تماس‌ها (دقیقه)
-                { wch: 25 },  // میانگین مدت تماس (دقیقه)
-                { wch: 22 },  // مدت کل تماس‌ها (ثانیه)
-                { wch: 25 }   // میانگین مدت تماس (ثانیه)
-            ];
+            const colWidths = data.length > 0 ?
+                Object.keys(data[0]).map(() => ({ wch: 20 })) : [];
             ws['!cols'] = colWidths;
 
-            // اضافه کردن worksheet به workbook
-            XLSX.utils.book_append_sheet(wb, ws, 'گزارش عملکرد تماس‌گیرندگان');
-
-            // تولید فایل و دانلود
-            const currentDate = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-');
-            const fileName = `گزارش_عملکرد_تماس_گیرندگان_${projectName}_${currentDate}.xlsx`;
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
             const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
             const blob = new Blob([wbout], { type: 'application/octet-stream' });
 
-            saveAs(blob, fileName);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
 
-            alert('فایل اکسل با موفقیت دانلود شد!');
             return true;
         } catch (error) {
-            console.error('خطا در تولید فایل اکسل:', error);
-            alert('خطا در تولید فایل اکسل');
+            console.error('Error creating Excel file:', error);
             return false;
         }
     };
+
+    const exportCallerPerformanceToExcel = () => {
+        if (!dashboardData?.callerPerformance?.length) {
+            alert('داده‌ای برای دانلود وجود ندارد');
+            return;
+        }
+
+        const worksheetData = dashboardData.callerPerformance.map((caller, index) => ({
+            'ردیف': index + 1,
+            'نام تماس‌گیرنده': caller.name || 'نامشخص',
+            'شماره تلفن': caller.phone_number || 'نامشخص',
+            'نام کاربری': caller.username || 'نامشخص',
+            'تعداد کل تماس‌ها': caller.total_calls_all_projects || 0,
+            'تماس‌های موفق': caller.total_successful_calls_all_projects || 0,
+            'تماس‌های پاسخ داده شده': caller.total_answered_calls_all_projects || 0,
+            'نرخ پاسخ‌دهی (درصد)': `${Math.round(caller.overall_response_rate || 0)}%`,
+            'نرخ موفقیت (درصد)': `${Math.round(caller.overall_success_rate || 0)}%`,
+            'مدت کل تماس‌ها (دقیقه)': Math.round((caller.total_duration_all_projects || 0) / 60),
+            'میانگین مدت تماس (ثانیه)': caller.overall_avg_duration || 0,
+            'تعداد پروژه‌ها': caller.project_count || 0
+        }));
+
+        const currentDate = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-');
+        const fileName = `گزارش_عملکرد_تماس_گیرندگان_${currentDate}.xlsx`;
+
+        if (exportToExcel(worksheetData, fileName, 'گزارش عملکرد')) {
+            alert('فایل اکسل با موفقیت دانلود شد!');
+        } else {
+            alert('خطا در تولید فایل اکسل');
+        }
+    };
+
     const handleExportAllReports = async () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://127.0.0.1:8000/api/excel/', {
+            if (!token) {
+                alert('لطفاً ابتدا وارد شوید');
+                return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/api/excel/`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Token ${token}`,
@@ -287,18 +292,17 @@ const AdminDashboard = () => {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to fetch data from /api/excel/');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
-            const results = data.results;
+            const results = data.results || [];
 
-            if (!results || results.length === 0) {
+            if (!results.length) {
                 alert('داده‌ای برای دانلود وجود ندارد');
                 return;
             }
 
-            // Map API data to Excel format with Persian headers
             const worksheetData = results.map((item, index) => ({
                 'ردیف': index + 1,
                 'نام تماس‌گیرنده': item.caller_name || 'نامشخص',
@@ -310,185 +314,116 @@ const AdminDashboard = () => {
                 'وضعیت تماس': item.call_status_display || 'نامشخص',
                 'یادداشت‌ها': item.notes || '',
                 'مدت زمان (ثانیه)': item.duration !== null ? item.duration : '0',
-                'تاریخ تماس': gregorianToPersian(item.call_date),
+                'تاریخ تماس': item.call_date ? gregorianToPersian(item.call_date) : 'نامشخص',
                 'فیلدهای سفارشی': item.custom_fields || '',
             }));
 
-            // Create workbook and worksheet
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(worksheetData);
-
-            // Set column widths
-            const colWidths = [
-                { wch: 8 },   // ردیف
-                { wch: 20 },  // نام تماس‌گیرنده
-                { wch: 20 },  // نام مخاطب
-                { wch: 15 },  // شماره مخاطب
-                { wch: 20 },  // نام پروژه
-                { wch: 15 },  // شماره تماس‌گیرنده
-                { wch: 15 },  // نتیجه تماس
-                { wch: 15 },  // وضعیت تماس
-                { wch: 30 },  // یادداشت‌ها
-                { wch: 15 },  // مدت زمان (ثانیه)
-                { wch: 15 },  // تاریخ تماس
-                { wch: 30 },  // فیلدهای سفارشی
-            ];
-            ws['!cols'] = colWidths;
-
-            // Append worksheet to workbook
-            XLSX.utils.book_append_sheet(wb, ws, 'گزارش تماس‌ها');
-
-            // Generate and download the Excel file
             const currentDate = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-');
             const fileName = `گزارش_کامل_تماس‌ها_${currentDate}.xlsx`;
 
-            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([wbout], { type: 'application/octet-stream' });
-            saveAs(blob, fileName);
-
-            alert('گزارش کامل تماس‌ها با موفقیت دانلود شد!');
+            if (exportToExcel(worksheetData, fileName, 'گزارش تماس‌ها')) {
+                alert('گزارش کامل با موفقیت دانلود شد!');
+            } else {
+                alert('خطا در تولید گزارش');
+            }
         } catch (error) {
-            console.error('خطا در تولید فایل اکسل:', error);
-            alert('خطا در تولید گزارش کامل');
+            console.error('Error fetching data:', error);
+            alert('خطا در دریافت داده‌ها');
         } finally {
             setLoading(false);
         }
     };
-    const exportDashboardStatsToExcel = (dashboardData) => {
-        try {
-            const wb = XLSX.utils.book_new();
 
-            // آمار کلی
-            const generalStats = [
-                ['نوع آمار', 'مقدار'],
-                ['کل پروژه‌ها', dashboardData.projectLength || 0],
-                ['کل تماس‌ها', dashboardData.total_calls || 0],
-                ['کل تماس‌گیرندگان', dashboardData.total_callers || 0],
-                ['نرخ موفقیت کلی', `${dashboardData.success_rate || 0}%`]
-            ];
+    // Convert Persian date to Gregorian for API
+    const persianToGregorianForAPI = (persianDate) => {
+        const [pYear, pMonth, pDay] = persianDate.split('/').map(Number);
+        let gYear = pYear + 621;
+        let gMonth = pMonth - 1;
+        let gDay = pDay;
 
-            const ws1 = XLSX.utils.aoa_to_sheet(generalStats);
-            ws1['!cols'] = [{ wch: 20 }, { wch: 15 }];
-            XLSX.utils.book_append_sheet(wb, ws1, 'آمار کلی');
-
-            // آمار پروژه‌ها
-            if (dashboardData.projectStats && dashboardData.projectStats.length > 0) {
-                const projectStats = dashboardData.projectStats.map((project, index) => ({
-                    'ردیف': index + 1,
-                    'نام پروژه': project.name || 'نامشخص',
-                    'کل تماس‌ها': project.total_calls || 0,
-                    'تماس‌های موفق': project.successful_calls || 0,
-                    'نرخ موفقیت': `${project.success_rate || 0}%`
-                }));
-
-                const ws2 = XLSX.utils.json_to_sheet(projectStats);
-                ws2['!cols'] = [
-                    { wch: 8 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
-                ];
-                XLSX.utils.book_append_sheet(wb, ws2, 'آمار پروژه‌ها');
+        if (pMonth <= 3) {
+            gMonth += 3;
+        } else if (pMonth <= 6) {
+            gMonth += 3;
+        } else if (pMonth <= 9) {
+            gMonth += 3;
+            if (gMonth > 11) {
+                gMonth -= 12;
+                gYear++;
             }
-
-            // توزیع وضعیت تماس‌ها
-            if (dashboardData.callStatusDistribution && dashboardData.callStatusDistribution.length > 0) {
-                const STATUS_NAME_MAP = {
-                    interested: 'علاقه‌مند',
-                    not_interested: 'غیر علاقه‌مند',
-                    no_time: 'عدم وقت'
-                };
-
-                const callStatusStats = dashboardData.callStatusDistribution.map((status, index) => ({
-                    'ردیف': index + 1,
-                    'نوع وضعیت': STATUS_NAME_MAP[status.name.toLowerCase()] || status.name || 'نامشخص',
-                    'درصد': `${status.value || 0}%`,
-                    'تعداد': status.count || 0
-                }));
-
-                const ws3 = XLSX.utils.json_to_sheet(callStatusStats);
-                ws3['!cols'] = [
-                    { wch: 8 }, { wch: 20 }, { wch: 12 }, { wch: 12 }
-                ];
-                XLSX.utils.book_append_sheet(wb, ws3, 'توزیع وضعیت تماس‌ها');
+        } else {
+            gMonth += 3;
+            if (gMonth > 11) {
+                gMonth -= 12;
+                gYear++;
             }
-
-            // عملکرد تماس‌گیرندگان
-            if (dashboardData.callerPerformance && dashboardData.callerPerformance.length > 0) {
-                const callerStats = dashboardData.callerPerformance.map((caller, index) => ({
-                    'ردیف': index + 1,
-                    'نام تماس‌گیرنده': caller.name || 'نامشخص',
-                    'پروژه': caller.project_name || 'نامشخص',
-                    'کل تماس‌ها': caller.total_calls || 0,
-                    'تماس‌های موفق': caller.successful_calls || 0,
-                    'نرخ موفقیت': `${caller.success_rate || 0}%`,
-                    'میانگین مدت تماس': `${caller.avg_duration || 0} دقیقه`
-                }));
-
-                const ws4 = XLSX.utils.json_to_sheet(callerStats);
-                ws4['!cols'] = [
-                    { wch: 8 }, { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 20 }
-                ];
-                XLSX.utils.book_append_sheet(wb, ws4, 'عملکرد تماس‌گیرندگان');
-            }
-
-            // روند تماس‌ها در طول زمان
-            if (dashboardData.callTrends && dashboardData.callTrends.length > 0) {
-                const trendStats = dashboardData.callTrends.map((trend, index) => ({
-                    'ردیف': index + 1,
-                    'تاریخ': gregorianToPersian(trend.date),
-                    'تعداد تماس‌ها': trend.calls || 0,
-                    'تماس‌های موفق': trend.successful || 0,
-                    'نرخ موفقیت': trend.calls > 0 ? `${Math.round((trend.successful / trend.calls) * 100)}%` : '0%'
-                }));
-
-                const ws5 = XLSX.utils.json_to_sheet(trendStats);
-                ws5['!cols'] = [
-                    { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
-                ];
-                XLSX.utils.book_append_sheet(wb, ws5, 'روند تماس‌ها');
-            }
-
-            // تولید فایل و دانلود
-            const currentDate = new Date().toLocaleDateString('fa-IR').replace(/\//g, '-');
-            const fileName = `گزارش_کامل_داشبورد_${currentDate}.xlsx`;
-
-            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([wbout], { type: 'application/octet-stream' });
-
-            saveAs(blob, fileName);
-
-            alert('گزارش کامل داشبورد با موفقیت دانلود شد!');
-            return true;
-        } catch (error) {
-            console.error('خطا در تولید فایل اکسل:', error);
-            alert('خطا در تولید گزارش کامل');
-            return false;
         }
+
+        const date = new Date(gYear, gMonth, gDay);
+        return date.toISOString().split('T')[0];
     };
 
-    // Fetch dashboard data from API
-    const fetchContact = async () => {
+    // Fetch dashboard data
+    const fetchDashboardData = async (isFiltered = false) => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE_URL}/api/admin/dashboard/`, {
-                method: 'POST',
+            if (!token) {
+                alert('لطفاً ابتدا وارد شوید');
+                return;
+            }
+
+            let url = `${API_BASE_URL}/api/admin/dashboard/`;
+            let method = 'GET';
+            let body = null;
+
+            if (isFiltered && dateRange.start_date && dateRange.end_date) {
+                method = 'POST';
+                body = JSON.stringify({
+                    start_date: persianToGregorianForAPI(dateRange.start_date),
+                    end_date: persianToGregorianForAPI(dateRange.end_date),
+                });
+            }
+
+            const response = await fetch(url, {
+                method,
                 headers: {
                     'Authorization': `Token ${token}`,
                     'Content-Type': 'application/json',
                 },
+                body,
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log(data);
-                setDashboardData(data.data); // Set the API response directly
-                console.log('Dashboard data fetched:', data);
-            } else {
-                console.error('Failed to fetch dashboard data:', response.statusText);
-                setDashboardData(null); // Fallback to null if API fails
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log(data)
+            // Process the data to match component expectations
+            const processedData = {
+                projectLength: data.total_projects || 0,
+                total_calls: data.total_calls || 0,
+                total_callers: data.total_callers || 0,
+                success_rate: data.success_rate || 0,
+                projectStats: data.projectStats || [],
+                callStatusDistribution: (data.callStatusDistribution || []).map(item => ({
+                    name: item.name,
+                    value: data.total_calls > 0 ? Math.round((item.count / data.total_calls) * 100) : 0,
+                    count: item.count
+                })),
+                callTrends: data.callTrends || [],
+                callerPerformance: data.callerPerformance || []
+            };
+
+            setDashboardData(processedData);
+
+            if (isFiltered) {
+                alert('فیلتر با موفقیت اعمال شد!');
             }
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
-            setDashboardData(null); // Fallback to null on error
+            alert('خطا در دریافت داده‌ها');
         } finally {
             setLoading(false);
         }
@@ -496,98 +431,32 @@ const AdminDashboard = () => {
 
     // Fetch data on component mount
     useEffect(() => {
-        fetchContact();
+        fetchDashboardData();
     }, []);
 
+    const handleFilterApply = () => {
+        if (!dateRange.start_date || !dateRange.end_date) {
+            alert('لطفاً هر دو تاریخ را انتخاب کنید');
+            return;
+        }
+        fetchDashboardData(true);
+    };
+
+    const handleFilterClear = () => {
+        setDateRange({ start_date: '', end_date: '' });
+        fetchDashboardData(false);
+    };
+
     const handleBackClick = () => {
-        alert('بازگشت به داشبورد اصلی');
+        // Replace with your actual navigation logic
+        window.history.back();
     };
 
-    const fetchDashboardData = async () => {
-        const persianToGregorianForFilter = (pYear, pMonth, pDay) => {
-            let gYear = pYear + 621;
-            let gMonth = pMonth - 1;
-            let gDay = pDay;
-
-            if (pMonth <= 3) {
-                gMonth += 3;
-            } else if (pMonth <= 6) {
-                gMonth += 3;
-            } else if (pMonth <= 9) {
-                gMonth += 3;
-                if (gMonth > 11) {
-                    gMonth -= 12;
-                    gYear++;
-                }
-            } else {
-                gMonth += 3;
-                if (gMonth > 11) {
-                    gMonth -= 12;
-                    gYear++;
-                }
-            }
-
-            return new Date(gYear, gMonth, gDay);
-        };
-
-        setLoading(true);
-        try {
-            // Convert Persian dates to Gregorian if needed
-            const startDateParts = dateRange.start_date.split('/').map(Number); // [year, month, day]
-            const endDateParts = dateRange.end_date.split('/').map(Number);     // [year, month, day]
-
-            const startGregorian = persianToGregorianForFilter(startDateParts[0], startDateParts[1], startDateParts[2]);
-            const endGregorian = persianToGregorianForFilter(endDateParts[0], endDateParts[1], endDateParts[2]);
-
-            // Format Gregorian dates as YYYY-MM-DD
-            const formatGregorianDate = (date) => {
-                return date.toISOString().split('T')[0]; // e.g., 2024-09-14
-            };
-
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE_URL}/api/admin/dashboard/`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Token ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    start_date: formatGregorianDate(startGregorian), // e.g., 2024-09-14
-                    end_date: formatGregorianDate(endGregorian),     // e.g., 2024-10-14
-                }),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setDashboardData(data);
-                alert('فیلتر اعمال شد!');
-            } else {
-                console.error('Failed to fetch filtered dashboard data:', response.statusText);
-                alert('خطا در اعمال فیلتر!');
-            }
-        } catch (error) {
-            console.error('Error fetching filtered dashboard data:', error);
-            alert('خطا در اعمال فیلتر!');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-
-
-    const handleExportCallerPerformance = (projectName = 'همه پروژه‌ها') => {
-        if (dashboardData?.callerPerformance && dashboardData.callerPerformance.length > 0) {
-            exportCallerPerformanceToExcel(dashboardData.callerPerformance, projectName);
-        } else {
-            alert('داده‌ای برای دانلود وجود ندارد');
-        }
-    };
-
-    // Define colors and Persian name mappings for statuses
+    // Define colors and Persian mappings for call status
     const STATUS_COLORS = {
-        interested: '#10B981', // Green
-        not_interested: '#EF4444', // Red
-        no_time: '#F59E0B', // Yellow
+        interested: '#10B981',
+        not_interested: '#EF4444',
+        no_time: '#F59E0B',
     };
 
     const STATUS_NAME_MAP = {
@@ -609,12 +478,14 @@ const AdminDashboard = () => {
         );
     }
 
-    // Fallback UI if no data is available
     if (!dashboardData) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
                 <div className="text-center">
-                    <p className="text-gray-600">داده‌ای برای نمایش وجود ندارد</p>
+                    <p className="text-gray-600 mb-4">داده‌ای برای نمایش وجود ندارد</p>
+                    <Button onClick={() => fetchDashboardData()}>
+                        تلاش مجدد
+                    </Button>
                 </div>
             </div>
         );
@@ -629,7 +500,7 @@ const AdminDashboard = () => {
     // Prepare call status distribution with Persian names
     const callStatusDistributionWithPersianNames = dashboardData.callStatusDistribution?.map(status => ({
         ...status,
-        name: STATUS_NAME_MAP[status.name.toLowerCase()] || status.name
+        name: STATUS_NAME_MAP[status.name?.toLowerCase()] || status.name
     })) || [];
 
     return (
@@ -691,7 +562,7 @@ const AdminDashboard = () => {
                                 />
                                 <div className="flex items-end">
                                     <Button
-                                        onClick={fetchDashboardData}
+                                        onClick={handleFilterApply}
                                         className="w-full bg-blue-600 hover:bg-blue-700"
                                         disabled={!dateRange.start_date || !dateRange.end_date || loading}
                                     >
@@ -700,10 +571,7 @@ const AdminDashboard = () => {
                                 </div>
                                 <div className="flex items-end">
                                     <Button
-                                        onClick={() => {
-                                            setDateRange({ start_date: '', end_date: '' });
-                                            fetchContact(); // Refetch default data
-                                        }}
+                                        onClick={handleFilterClear}
                                         variant="outline"
                                         className="w-full"
                                         disabled={loading}
@@ -731,7 +599,7 @@ const AdminDashboard = () => {
                                                 کل پروژه‌ها
                                             </dt>
                                             <dd className="text-lg font-medium text-gray-900">
-                                                {dashboardData.projectLength || 0}
+                                                {dashboardData.projectLength}
                                             </dd>
                                         </dl>
                                     </div>
@@ -753,7 +621,7 @@ const AdminDashboard = () => {
                                                 کل تماس‌ها
                                             </dt>
                                             <dd className="text-lg font-medium text-gray-900">
-                                                {dashboardData.total_calls || 0}
+                                                {dashboardData.total_calls}
                                             </dd>
                                         </dl>
                                     </div>
@@ -775,7 +643,7 @@ const AdminDashboard = () => {
                                                 کل تماس‌گیرندگان
                                             </dt>
                                             <dd className="text-lg font-medium text-gray-900">
-                                                {dashboardData.total_callers || 0}
+                                                {dashboardData.total_callers}
                                             </dd>
                                         </dl>
                                     </div>
@@ -797,7 +665,7 @@ const AdminDashboard = () => {
                                                 نرخ موفقیت
                                             </dt>
                                             <dd className="text-lg font-medium text-gray-900">
-                                                {dashboardData.success_rate || 0}%
+                                                {Math.round(dashboardData.success_rate)}%
                                             </dd>
                                         </dl>
                                     </div>
@@ -860,7 +728,9 @@ const AdminDashboard = () => {
                                             <div key={entry.name} className="flex items-center mb-2">
                                                 <div
                                                     className="w-3 h-3 rounded-full ml-2"
-                                                    style={{ backgroundColor: STATUS_COLORS[Object.keys(STATUS_NAME_MAP).find(key => STATUS_NAME_MAP[key] === entry.name) || entry.name.toLowerCase()] || COLORS[index % COLORS.length] }}
+                                                    style={{
+                                                        backgroundColor: STATUS_COLORS[Object.keys(STATUS_NAME_MAP).find(key => STATUS_NAME_MAP[key] === entry.name) || entry.name.toLowerCase()] || COLORS[index % COLORS.length]
+                                                    }}
                                                 ></div>
                                                 <span className="text-sm text-gray-700">
                                                     {entry.name}: {entry.value}%
@@ -900,7 +770,7 @@ const AdminDashboard = () => {
                                 عملکرد تماس‌گیرندگان
                                 <div className="flex gap-2">
                                     <Button
-                                        onClick={() => handleExportCallerPerformance()}
+                                        onClick={exportCallerPerformanceToExcel}
                                         size="sm"
                                         className="bg-blue-600 hover:bg-blue-700"
                                         disabled={loading}
@@ -930,13 +800,22 @@ const AdminDashboard = () => {
                                                 تماس‌گیرنده
                                             </th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                پروژه
+                                                شماره تلفن
+                                            </th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                نام کاربری
                                             </th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 کل تماس‌ها
                                             </th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                تماس‌های پاسخ داده شده
+                                            </th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 تماس‌های موفق
+                                            </th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                نرخ پاسخ‌دهی
                                             </th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 نرخ موفقیت
@@ -944,37 +823,56 @@ const AdminDashboard = () => {
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 میانگین مدت تماس
                                             </th>
+
                                         </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
                                         {dashboardData.callerPerformance.map((caller, index) => (
-                                            <tr key={index} className="hover:bg-gray-50">
+                                            <tr key={caller.caller_id || index} className="hover:bg-gray-50">
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                    {caller.name}
+                                                    {caller.name || 'نامشخص'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {caller.project_name || 'نامشخص'}
+                                                    {caller.phone_number || 'نامشخص'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {caller.total_calls}
+                                                    {caller.username || 'نامشخص'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {caller.successful_calls}
+                                                    {caller.total_calls_all_projects || 0}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {caller.total_answered_calls_all_projects || 0}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {caller.total_successful_calls_all_projects || 0}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                                            caller.success_rate >= 70
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : caller.success_rate >= 50
-                                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                                    : 'bg-red-100 text-red-800'
-                                                        }`}>
-                                                            {caller.success_rate}%
-                                                        </span>
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                                        (caller.overall_response_rate || 0) >= 70
+                                                            ? 'bg-blue-100 text-blue-800'
+                                                            : (caller.overall_response_rate || 0) >= 50
+                                                                ? 'bg-yellow-100 text-yellow-800'
+                                                                : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {Math.round(caller.overall_response_rate || 0)}%
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                                        (caller.overall_success_rate || 0) >= 70
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : (caller.overall_success_rate || 0) >= 50
+                                                                ? 'bg-yellow-100 text-yellow-800'
+                                                                : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                        {Math.round(caller.overall_success_rate || 0)}%
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {caller.avg_duration} دقیقه
+                                                    {Math.round(caller.overall_avg_duration || 0)} ثانیه
                                                 </td>
+
                                             </tr>
                                         ))}
                                         </tbody>
