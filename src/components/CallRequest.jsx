@@ -136,11 +136,16 @@ const CallRequest = () => {
         initialize();
     }, [navigate, fetchUserRole, fetchContacts]);
 
-    const handleStartCall = (contactId) => {
+    const handleStartCall = (contactId, phoneNumber) => {
+        // Update call status to 'in_progress'
         setCallStatuses(prev => ({
             ...prev,
             [contactId]: 'in_progress'
         }));
+        // Open the phone dialer with the contact's phone number
+        if (phoneNumber) {
+            window.location.href = `tel:${phoneNumber}`;
+        }
     };
 
     const handleEndCall = (contactId) => {
@@ -356,7 +361,6 @@ const CallRequest = () => {
 
         // اگر مخاطب تماس‌گیرنده مشخصی ندارد، ادمین نمی‌تواند تماس بگیرد
         if (!contactData.assigned_caller_phone) {
-            ""
             return false;
         }
 
@@ -477,7 +481,7 @@ const CallRequest = () => {
                                         </Button>
                                     ) : (
                                         <Button
-                                            onClick={() => handleStartCall(contactData.id)}
+                                            onClick={() => handleStartCall(contactData.id, contactData.phone)}
                                             size="sm"
                                             className="bg-green-500 hover:bg-green-600 text-white rounded-lg flex-1 sm:flex-none"
                                             disabled={actionLoading}

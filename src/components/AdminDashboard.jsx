@@ -144,7 +144,7 @@ const PersianDatePicker = ({ value, onChange, placeholder, label }) => {
     };
 
     return (
-        <div className="relative">
+        <div className="relative w-full max-w-[300px] sm:max-w-[400px]">
             <label className="block text-sm font-medium text-gray-700 mb-2">
                 {label}
             </label>
@@ -156,7 +156,7 @@ const PersianDatePicker = ({ value, onChange, placeholder, label }) => {
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 w-full max-w-[300px] sm:max-w-[400px]">
                     <div className="flex justify-between items-center p-2 border-b">
                         <button onClick={prevMonth} className="p-1 hover:bg-gray-100 rounded">
                             <span className="text-lg">‹</span>
@@ -297,7 +297,7 @@ const AdminDashboard = () => {
 
             const data = await response.json();
             const results = data.results || [];
-
+            console.log(results);
             if (!results.length) {
                 alert('داده‌ای برای دانلود وجود ندارد');
                 return;
@@ -315,6 +315,7 @@ const AdminDashboard = () => {
                 'یادداشت‌ها': item.notes || '',
                 'مدت زمان (ثانیه)': item.duration !== null ? item.duration : '0',
                 'تاریخ تماس': item.call_date ? gregorianToPersian(item.call_date) : 'نامشخص',
+                'آدرس':item.address || 'نامشخص',
                 'فیلدهای سفارشی': item.custom_fields || '',
             }));
 
@@ -373,7 +374,7 @@ const AdminDashboard = () => {
                 return;
             }
 
-            let url = `${API_BASE_URL}/api/admin/dashboard/`;
+            let url = `${API_BASE_URL}/api/admin/dashboard`;
             let method = 'GET';
             let body = null;
 
@@ -469,10 +470,10 @@ const AdminDashboard = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">در حال بارگذاری...</p>
+                    <p className="mt-4 text-gray-600 text-sm sm:text-base">در حال بارگذاری...</p>
                 </div>
             </div>
         );
@@ -480,9 +481,9 @@ const AdminDashboard = () => {
 
     if (!dashboardData) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
                 <div className="text-center">
-                    <p className="text-gray-600 mb-4">داده‌ای برای نمایش وجود ندارد</p>
+                    <p className="text-gray-600 mb-4 text-sm sm:text-base">داده‌ای برای نمایش وجود ندارد</p>
                     <Button onClick={() => fetchDashboardData()}>
                         تلاش مجدد
                     </Button>
@@ -508,8 +509,8 @@ const AdminDashboard = () => {
             {/* Header */}
             <header className="bg-white shadow-sm border-b">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center">
+                    <div className="flex flex-col sm:flex-row justify-between items-center py-4">
+                        <div className="flex items-center mb-4 sm:mb-0">
                             <button
                                 onClick={handleBackClick}
                                 className="ml-4 p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -520,12 +521,12 @@ const AdminDashboard = () => {
                                 <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
                                     <Settings className="w-5 h-5 text-white" />
                                 </div>
-                                <h1 className="mr-4 text-xl font-semibold text-gray-900">داشبورد مدیریت</h1>
+                                <h1 className="mr-4 text-lg sm:text-xl font-semibold text-gray-900">داشبورد مدیریت</h1>
                             </div>
                         </div>
                         <Button
                             onClick={handleExportAllReports}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-green-600 hover:bg-green-700 text-sm px-3 py-2"
                             disabled={loading}
                         >
                             <Download className="w-4 h-4 ml-2" />
@@ -536,18 +537,18 @@ const AdminDashboard = () => {
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
+            <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <div className="py-6">
                     {/* Date Range Filter */}
                     <Card className="mb-6">
                         <CardHeader>
-                            <CardTitle className="flex items-center">
+                            <CardTitle className="flex items-center text-base sm:text-lg">
                                 <Calendar className="w-5 h-5 text-blue-500 ml-2" />
                                 فیلتر بازه زمانی
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <PersianDatePicker
                                     label="از تاریخ"
                                     placeholder="انتخاب تاریخ شروع"
@@ -563,7 +564,7 @@ const AdminDashboard = () => {
                                 <div className="flex items-end">
                                     <Button
                                         onClick={handleFilterApply}
-                                        className="w-full bg-blue-600 hover:bg-blue-700"
+                                        className="w-full bg-blue-600 hover:bg-blue-700 text-sm py-2"
                                         disabled={!dateRange.start_date || !dateRange.end_date || loading}
                                     >
                                         {loading ? 'در حال بارگذاری...' : 'اعمال فیلتر'}
@@ -573,7 +574,7 @@ const AdminDashboard = () => {
                                     <Button
                                         onClick={handleFilterClear}
                                         variant="outline"
-                                        className="w-full"
+                                        className="w-full text-sm py-2"
                                         disabled={loading}
                                     >
                                         پاک کردن فیلتر
@@ -584,9 +585,9 @@ const AdminDashboard = () => {
                     </Card>
 
                     {/* Overview Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
                         <Card>
-                            <CardContent className="p-6">
+                            <CardContent className="p-4 sm:p-6">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
                                         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -595,10 +596,10 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="mr-5 w-0 flex-1">
                                         <dl>
-                                            <dt className="text-sm font-medium text-gray-500 truncate">
+                                            <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
                                                 کل پروژه‌ها
                                             </dt>
-                                            <dd className="text-lg font-medium text-gray-900">
+                                            <dd className="text-base sm:text-lg font-medium text-gray-900">
                                                 {dashboardData.projectLength}
                                             </dd>
                                         </dl>
@@ -608,7 +609,7 @@ const AdminDashboard = () => {
                         </Card>
 
                         <Card>
-                            <CardContent className="p-6">
+                            <CardContent className="p-4 sm:p-6">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
                                         <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
@@ -617,10 +618,10 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="mr-5 w-0 flex-1">
                                         <dl>
-                                            <dt className="text-sm font-medium text-gray-500 truncate">
+                                            <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
                                                 کل تماس‌ها
                                             </dt>
-                                            <dd className="text-lg font-medium text-gray-900">
+                                            <dd className="text-base sm:text-lg font-medium text-gray-900">
                                                 {dashboardData.total_calls}
                                             </dd>
                                         </dl>
@@ -630,7 +631,7 @@ const AdminDashboard = () => {
                         </Card>
 
                         <Card>
-                            <CardContent className="p-6">
+                            <CardContent className="p-4 sm:p-6">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
                                         <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
@@ -639,10 +640,10 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="mr-5 w-0 flex-1">
                                         <dl>
-                                            <dt className="text-sm font-medium text-gray-500 truncate">
+                                            <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
                                                 کل تماس‌گیرندگان
                                             </dt>
-                                            <dd className="text-lg font-medium text-gray-900">
+                                            <dd className="text-base sm:text-lg font-medium text-gray-900">
                                                 {dashboardData.total_callers}
                                             </dd>
                                         </dl>
@@ -652,7 +653,7 @@ const AdminDashboard = () => {
                         </Card>
 
                         <Card>
-                            <CardContent className="p-6">
+                            <CardContent className="p-4 sm:p-6">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
                                         <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
@@ -661,10 +662,10 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="mr-5 w-0 flex-1">
                                         <dl>
-                                            <dt className="text-sm font-medium text-gray-500 truncate">
+                                            <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">
                                                 نرخ موفقیت
                                             </dt>
-                                            <dd className="text-lg font-medium text-gray-900">
+                                            <dd className="text-base sm:text-lg font-medium text-gray-900">
                                                 {Math.round(dashboardData.success_rate)}%
                                             </dd>
                                         </dl>
@@ -675,18 +676,18 @@ const AdminDashboard = () => {
                     </div>
 
                     {/* Charts Row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
                         {/* Project Performance Chart */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>عملکرد پروژه‌ها</CardTitle>
+                                <CardTitle className="text-base sm:text-lg">عملکرد پروژه‌ها</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={dashboardData.projectStats} margin={{ top: 20, right: 40, left: 20, bottom: 5 }}>
+                                <ResponsiveContainer width="100%" height={250} className="min-h-[200px] sm:min-h-[250px]">
+                                    <BarChart data={dashboardData.projectStats} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="name" />
-                                        <YAxis />
+                                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                                        <YAxis tick={{ fontSize: 12 }} />
                                         <Tooltip />
                                         <Bar dataKey="total_calls" fill="#3B82F6" name="کل تماس‌ها" />
                                         <Bar dataKey="successful_calls" fill="#10B981" name="تماس‌های موفق" />
@@ -698,12 +699,12 @@ const AdminDashboard = () => {
                         {/* Call Status Distribution */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>توزیع وضعیت تماس‌ها</CardTitle>
+                                <CardTitle className="text-base sm:text-lg">توزیع وضعیت تماس‌ها</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="flex items-center">
-                                    <div className="flex-1">
-                                        <ResponsiveContainer width="100%" height={300}>
+                                <div className="flex flex-col sm:flex-row items-center">
+                                    <div className="flex-1 w-full">
+                                        <ResponsiveContainer width="100%" height={250} className="min-h-[200px] sm:min-h-[250px]">
                                             <PieChart>
                                                 <Pie
                                                     data={callStatusDistributionWithPersianNames}
@@ -723,7 +724,7 @@ const AdminDashboard = () => {
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    <div className="mr-4">
+                                    <div className="mt-4 sm:mt-0 sm:mr-4">
                                         {callStatusDistributionWithPersianNames.map((entry, index) => (
                                             <div key={entry.name} className="flex items-center mb-2">
                                                 <div
@@ -732,7 +733,7 @@ const AdminDashboard = () => {
                                                         backgroundColor: STATUS_COLORS[Object.keys(STATUS_NAME_MAP).find(key => STATUS_NAME_MAP[key] === entry.name) || entry.name.toLowerCase()] || COLORS[index % COLORS.length]
                                                     }}
                                                 ></div>
-                                                <span className="text-sm text-gray-700">
+                                                <span className="text-xs sm:text-sm text-gray-700">
                                                     {entry.name}: {entry.value}%
                                                 </span>
                                             </div>
@@ -746,14 +747,14 @@ const AdminDashboard = () => {
                     {/* Call Trends Chart */}
                     <Card className="mb-6">
                         <CardHeader>
-                            <CardTitle>روند تماس‌ها در طول زمان</CardTitle>
+                            <CardTitle className="text-base sm:text-lg">روند تماس‌ها در طول زمان</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ResponsiveContainer width="100%" height={400}>
+                            <ResponsiveContainer width="100%" height={300} className="min-h-[250px] sm:min-h-[300px]">
                                 <LineChart data={callTrendsWithPersianDates}>
                                     <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="persianDate" />
-                                    <YAxis />
+                                    <XAxis dataKey="persianDate" tick={{ fontSize: 12 }} />
+                                    <YAxis tick={{ fontSize: 12 }} />
                                     <Tooltip />
                                     <Line type="monotone" dataKey="calls" stroke="#3B82F6" strokeWidth={2} name="تماس‌ها" />
                                     <Line type="monotone" dataKey="successful" stroke="#10B981" strokeWidth={2} name="موفق" />
@@ -766,13 +767,13 @@ const AdminDashboard = () => {
                     {/* Caller Performance Table */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center justify-between">
+                            <CardTitle className="flex flex-col sm:flex-row items-center justify-between text-base sm:text-lg">
                                 عملکرد تماس‌گیرندگان
-                                <div className="flex gap-2">
+                                <div className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0">
                                     <Button
                                         onClick={exportCallerPerformanceToExcel}
                                         size="sm"
-                                        className="bg-blue-600 hover:bg-blue-700"
+                                        className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm py-2"
                                         disabled={loading}
                                     >
                                         <Download className="w-4 h-4 ml-2" />
@@ -781,7 +782,7 @@ const AdminDashboard = () => {
                                     <Button
                                         onClick={handleExportAllReports}
                                         size="sm"
-                                        className="bg-green-600 hover:bg-green-700"
+                                        className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm py-2"
                                         disabled={loading}
                                     >
                                         <Download className="w-4 h-4 ml-2" />
@@ -796,58 +797,57 @@ const AdminDashboard = () => {
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 تماس‌گیرنده
                                             </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 شماره تلفن
                                             </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 نام کاربری
                                             </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 کل تماس‌ها
                                             </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 تماس‌های پاسخ داده شده
                                             </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 تماس‌های موفق
                                             </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 نرخ پاسخ‌دهی
                                             </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 نرخ موفقیت
                                             </th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 میانگین مدت تماس
                                             </th>
-
                                         </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
                                         {dashboardData.callerPerformance.map((caller, index) => (
                                             <tr key={caller.caller_id || index} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
                                                     {caller.name || 'نامشخص'}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                                                     {caller.phone_number || 'نامشخص'}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                                                     {caller.username || 'نامشخص'}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                                                     {caller.total_calls_all_projects || 0}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                                                     {caller.total_answered_calls_all_projects || 0}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                                                     {caller.total_successful_calls_all_projects || 0}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap">
                                                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                                                         (caller.overall_response_rate || 0) >= 70
                                                             ? 'bg-blue-100 text-blue-800'
@@ -858,7 +858,7 @@ const AdminDashboard = () => {
                                                         {Math.round(caller.overall_response_rate || 0)}%
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap">
                                                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                                                         (caller.overall_success_rate || 0) >= 70
                                                             ? 'bg-green-100 text-green-800'
@@ -869,10 +869,9 @@ const AdminDashboard = () => {
                                                         {Math.round(caller.overall_success_rate || 0)}%
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                <td className="px-2 sm:px-4 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">
                                                     {Math.round(caller.overall_avg_duration || 0)} ثانیه
                                                 </td>
-
                                             </tr>
                                         ))}
                                         </tbody>
@@ -880,8 +879,8 @@ const AdminDashboard = () => {
                                 </div>
                             ) : (
                                 <div className="text-center py-8">
-                                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                    <p className="text-gray-600">هیچ داده‌ای برای نمایش وجود ندارد</p>
+                                    <Users className="w-10 sm:w-12 h-10 sm:h-12 text-gray-400 mx-auto mb-4" />
+                                    <p className="text-gray-600 text-sm sm:text-base">هیچ داده‌ای برای نمایش وجود ندارد</p>
                                 </div>
                             )}
                         </CardContent>

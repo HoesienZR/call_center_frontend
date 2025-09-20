@@ -63,6 +63,7 @@ const Projects = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log(data)
         setProjects(data.results);
       } else {
         console.error('Failed to fetch projects');
