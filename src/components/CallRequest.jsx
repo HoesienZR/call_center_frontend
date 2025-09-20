@@ -95,7 +95,6 @@ const CallRequest = () => {
             } else if (response.ok) {
                 const data = await response.json();
                 let contacts = Array.isArray(data.results) ? data.results : [];
-                console.log('Fetched contacts:', contacts);
 
                 // بک‌اند خودش فیلتر می‌کند، نیازی به فیلتر اضافی نیست
                 setAllContacts(contacts);
@@ -282,7 +281,7 @@ const CallRequest = () => {
                 body.caller_phone_number = newContact.assigned_caller_phone;
             }
 
-            console.log("Request Body:", body);
+
 
             try {
                 const response = await fetch(`${API_BASE_URL}/api/contacts/`, {
@@ -319,7 +318,6 @@ const CallRequest = () => {
                 });
                 setIsDialogOpen(false);
                 setFormErrors({});
-
                 // به‌روزرسانی لیست مخاطبین
                 await fetchContacts(token, userRole);
                 showToast('مخاطب با موفقیت اضافه شد.');
@@ -367,11 +365,10 @@ const CallRequest = () => {
         // بررسی تطابق شماره تلفن ادمین (از فیلد phone) با تماس‌گیرنده مسئول
         const adminPhone = userRole.phone?.replace(/\D/g, '') || '';
         const assignedCallerPhone = contactData.assigned_caller_phone?.replace(/\D/g, '') || '';
-        console.log(assignedCallerPhone);
-        console.log(adminPhone);
+
         return adminPhone === assignedCallerPhone;
     };
-    console.log(allContacts)
+
     // کامپوننت نمایش لیست مخاطبین
     const ContactListItem = ({ contactData, index }) => {
         const [showDetails, setShowDetails] = useState(false);
@@ -381,7 +378,6 @@ const CallRequest = () => {
             // اگر API فیلد can_call رو ارسال کرده، از اون استفاده کن
 
             // *** تغییر کلیدی: بررسی جداگانه برای ادمین ***
-            console.log(userRole?.is_admin)
             if (userRole?.is_admin) {
                 return canAdminCallContact(contactData);
             }

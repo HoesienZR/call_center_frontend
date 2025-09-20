@@ -401,6 +401,9 @@ const AdminDashboard = () => {
 
             const data = await response.json();
             console.log(data)
+            let all = data.callStatusDistribution[0].count;
+            all += data.callStatusDistribution[1].count;
+            all += data.callStatusDistribution[2].count;
             // Process the data to match component expectations
             const processedData = {
                 projectLength: data.total_projects || 0,
@@ -410,7 +413,7 @@ const AdminDashboard = () => {
                 projectStats: data.projectStats || [],
                 callStatusDistribution: (data.callStatusDistribution || []).map(item => ({
                     name: item.name,
-                    value: data.total_calls > 0 ? Math.round((item.count / data.total_calls) * 100) : 0,
+                    value: data.total_calls > 0 ? Math.round((item.count / all) * 100) : 0,
                     count: item.count
                 })),
                 callTrends: data.callTrends || [],

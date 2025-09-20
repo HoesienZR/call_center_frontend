@@ -63,7 +63,6 @@ const Projects = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log(data)
         setProjects(data.results);
       } else {
         console.error('Failed to fetch projects');
@@ -267,7 +266,7 @@ const Projects = () => {
                             <div className="flex items-center">
                               <Users className="w-4 h-4 text-blue-500 ml-2" />
                               <span className="text-sm text-gray-600">
-                          {project.callers_count || 0} تماس‌گیرنده
+                          {project.members.length || 0} تماس‌گیرنده
                         </span>
                             </div>
                             <div className="flex items-center">

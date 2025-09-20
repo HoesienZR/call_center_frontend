@@ -61,7 +61,7 @@ const Reports = () => {
             }
 
             const data = await response.json();
-            console.log('API Response:', data);
+
 
             // پردازش پاسخ API بر اساس ساختار جدید
             setProject({
@@ -84,7 +84,7 @@ const Reports = () => {
 
             setError(null);
         } catch (error) {
-            console.error('Error fetching statistics:', error);
+
             setError(error.message);
             throw error;
         }
@@ -95,7 +95,7 @@ const Reports = () => {
         if (!Array.isArray(rawCallersData)) {
             return [];
         }
-        console.log('Raw callers data:', rawCallersData);
+
 
         return rawCallersData.map((caller) => ({
             id: caller.caller_id || Math.random().toString(36).substr(2, 9),
@@ -235,7 +235,7 @@ const Reports = () => {
 
             return `${shamsiYear}/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`;
         } catch (error) {
-            console.error('Error converting date:', error);
+
             return gregorianDate;
         }
     };
@@ -276,7 +276,7 @@ const Reports = () => {
             downloadExcel(excelData, `گزارش_${project?.name || 'پروژه'}_${new Date().toLocaleDateString('fa-IR')}.xlsx`);
 
         } catch (error) {
-            console.error('Error exporting report:', error);
+
             alert('خطا در تولید گزارش: ' + error.message);
         } finally {
             setLoading(false);
@@ -285,13 +285,12 @@ const Reports = () => {
 
     // تابع تولید داده‌های اکسل
     const generateExcelData = (data) => {
-        console.log('Full API Response:', data);
+
 
         // بر اساس ساختار JSON که دادید، داده‌ها در results هست
         const calls = data.results || data.calls || data.detailed_calls || [];
 
-        console.log('Extracted calls:', calls);
-        console.log('Number of calls:', calls.length);
+
 
         const headers = [
             'ردیف',
@@ -310,7 +309,7 @@ const Reports = () => {
         ];
 
         const rows = calls.map((call, index) => {
-            console.log(`Processing call ${index + 1}:`, call);
+
 
             return [
                 index+1,
@@ -328,9 +327,6 @@ const Reports = () => {
                 call.custom_fields || call.additional_info || ''
             ];
         });
-
-        console.log('Generated rows:', rows);
-        console.log('Final excel data:', [headers, ...rows]);
 
         return [headers, ...rows];
     };

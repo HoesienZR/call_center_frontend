@@ -28,42 +28,27 @@ const Dashboard = () => {
 
   const fetchDashboardStats = async (token) => {
     try {
-      const projectsResponse = await fetch(`${API_BASE_URL}/api/projects/`, {
+      const DashboardStats = await fetch(`${API_BASE_URL}/api/main_dashboard`, {
         headers: {
           Authorization: `Token ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
-      let projects = { results: [] };
-      if (projectsResponse.status === 403) {
-        setHasProjectAccess(false);
-      } else if (!projectsResponse.ok) {
-        throw new Error(`Failed to fetch projects: ${projectsResponse.status}`);
-      } else {
-        projects = await projectsResponse.json();
+      if (!DashboardStats.ok) {
+        throw new Error(`Failed to fetch calls: ${DashboardStats.status}`);
       }
 
-      const callsResponse = await fetch(`${API_BASE_URL}/api/calls/`, {
-        headers: {
-          Authorization: `Token ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
 
-      if (!callsResponse.ok) {
-        throw new Error(`Failed to fetch calls: ${callsResponse.status}`);
-      }
+      const stats = await DashboardStats.json();
 
-      const callsData = await callsResponse.json();
-      const calls = callsData.results || callsData;
-      const completedCalls = calls.filter((call) => call.status === 'completed').length;
 
+      console.log(stats);
       setStats({
-        totalProjects: projects.results.length,
-        totalCalls: calls.length,
-        completedCalls: completedCalls,
-        pendingCalls: calls.length - completedCalls,
+        totalProjects: stats.project_count,
+        totalCalls:  stats.calls_count,
+        completedCalls: stats.answered_calls_count,
+        pendingCalls: stats.pending_calls_count,
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);

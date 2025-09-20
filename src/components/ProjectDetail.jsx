@@ -266,7 +266,7 @@ const ProjectDetail = () => {
                               تماس‌گیرندگان
                             </dt>
                             <dd className="text-base sm:text-lg font-medium text-gray-900">
-                              {project.callers_count || 0}
+                              {project.members.length || 0}
                             </dd>
                           </dl>
                         </div>
@@ -310,7 +310,7 @@ const ProjectDetail = () => {
                               تماس‌های انجام شده
                             </dt>
                             <dd className="text-base sm:text-lg font-medium text-gray-900">
-                              {project.call_results_distribution?.answered || 0}
+                              {completedCalls || 0}
                             </dd>
                           </dl>
                         </div>
@@ -332,7 +332,7 @@ const ProjectDetail = () => {
                               تماس‌های در انتظار
                             </dt>
                             <dd className="text-base sm:text-lg font-medium text-gray-900">
-                              {project.call_results_distribution?.busy || 0}
+                              {pendingCalls || 0}
                             </dd>
                           </dl>
                         </div>

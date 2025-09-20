@@ -55,7 +55,6 @@ const CallFeedback = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log(data);
         setContact(data);
       } else {
         console.error('Failed to fetch contact');
