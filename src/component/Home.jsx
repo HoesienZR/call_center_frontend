@@ -10,6 +10,7 @@ import { FaCheckCircle } from "react-icons/fa";
 import { FaClock } from "react-icons/fa6";
 import { IoCodeWorkingSharp } from "react-icons/io5";
 import "./AdminHome.css";
+import {API_BASE_URL} from "../config.js";
 export default function Home() {
   const [info, setInfo] = useState({});
   useEffect(() => {
@@ -40,7 +41,6 @@ export default function Home() {
       console.log("error:" + error);
     }
   }
-  console.log(info);
   return (
     <>
       <NavigationBar />

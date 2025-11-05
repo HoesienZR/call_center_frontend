@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { Card, Col, Container, Row } from "react-bootstrap";
+import { Card, Col, Container, Row, Spinner } from "react-bootstrap";
 import { FaUserGroup } from "react-icons/fa6";
 import { FaPhoneSquareAlt } from "react-icons/fa";
 import { MdPermPhoneMsg } from "react-icons/md";
@@ -17,10 +16,11 @@ import {API_BASE_URL} from "../config.js";
 export default function ProjectsId() {
   const [listItem, setListItem] = useState([]);
   const [updateData, setUpdateData] = useState({});
+  const [loading, setLoading] = useState(true); // فقط این اضافه شد
   const formatDate = moment().locale("fa").format("D MMMM YYYY");
   const token = localStorage.getItem("authToken");
   const { id } = useParams();
-  const user = JSON.parse(localStorage.getItem("user")); // دریافت اطلاعات کاربر از localStorage
+  const user = JSON.parse(localStorage.getItem("user"));
 
   const [card, setCard] = useState([
     {
@@ -136,8 +136,13 @@ export default function ProjectsId() {
   ]);
 
   useEffect(() => {
-    getProject();
-    getStatic();
+    const fetchData = async () => {
+      setLoading(true);
+      await Promise.all([getProject(), getStatic()]);
+      setLoading(false);
+    };
+
+    fetchData();
   }, [id, token]);
 
   useEffect(() => {
@@ -185,39 +190,36 @@ export default function ProjectsId() {
               style={{ fontSize: "17px" }}
             />
           ),
-          counter: updateData.call_results_distribution?.callback_requested?.toString() || "0",
+          counter:
+            updateData.call_results_distribution?.callback_requested?.toString() ||
+            "0",
         },
       ]);
     }
   }, [updateData]);
 
   async function getProject() {
-    await fetch(`${API_BASE_URL}/api/projects/`, {
-      method: "GET",
-      headers: {
-        Authorization: `Token ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.results && Array.isArray(data.results)) {
-          setListItem(data.results);
-          console.log("Processed listItem:", data.results);
-        } else {
-          setListItem([]);
-          console.log("No valid results found in API response");
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching projects:", error);
-        setListItem([]);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/projects/`, {
+        method: "GET",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
       });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.results && Array.isArray(data.results)) {
+        setListItem(data.results);
+      } else {
+        setListItem([]);
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      setListItem([]);
+    }
   }
 
   async function getStatic() {
@@ -236,13 +238,10 @@ export default function ProjectsId() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log("Raw API response for getStatic:", data);
       if (data) {
         setUpdateData(data);
-        console.log("Processed updateData:", data);
       } else {
         setUpdateData({});
-        console.log("No valid results found in API response for getStatic");
       }
     } catch (error) {
       console.error("Error fetching statistics:", error);
@@ -251,25 +250,29 @@ export default function ProjectsId() {
   }
 
   const selectionItem = listItem.find((item) => item.id == id);
-
-  // بررسی role کاربر کنونی در members
   const userRole = selectionItem?.members?.find(
     (member) => member.user.id === user?.id
   )?.role;
-
-  // فیلتر کردن کارت‌ها بر اساس role
   const filteredCards =
     userRole === "caller"
       ? cards.filter(
           (item) =>
-            item.imText === "درخواست تماس" || item.imText === "تاریخچه تماس کاربر"
+            item.imText === "درخواست تماس" ||
+            item.imText === "تاریخچه تماس کاربر"
         )
       : cards;
 
   return (
     <>
       <NavigationBar />
-      {selectionItem ? (
+      {loading ? (
+        <div className="text-center py-5 my-5">
+          <Spinner animation="border" variant="primary" size="lg" />
+          <p className="mt-3 text-muted fs-5">
+            در حال بارگذاری اطلاعات پروژه...
+          </p>
+        </div>
+      ) : selectionItem ? (
         <Container className="p-3" style={{ direction: "rtl" }}>
           <Card className="p-3 mt-5">
             <Card.Title>اطلاعات پروژه</Card.Title>
@@ -281,13 +284,14 @@ export default function ProjectsId() {
                 </Col>
                 <Col lg="6">
                   <p className="text-secondary">تاریخ ایجاد</p>
-                  <h6>{formatDate}</h6>
+                  <h6>{selectionItem.persian_created_at}</h6>
                 </Col>
               </Row>
               <p className="text-secondary mt-4">توضیحات</p>
               <h6>{selectionItem.description}</h6>
             </Card.Body>
           </Card>
+
           <Card className="mt-5">
             <Card.Body>
               <Row>
@@ -310,6 +314,7 @@ export default function ProjectsId() {
                   </Col>
                 ))}
               </Row>
+
               <Row className="text-center">
                 {filteredCards.map((item) => (
                   <Col lg="3" key={item.id}>

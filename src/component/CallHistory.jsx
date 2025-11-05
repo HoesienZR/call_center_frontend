@@ -9,6 +9,7 @@ import {
   Form,
   Button,
   Modal,
+  Spinner,
 } from "react-bootstrap";
 import { BsClockHistory } from "react-icons/bs";
 import { useParams } from "react-router-dom";
@@ -22,8 +23,9 @@ export default function CallHistory() {
   const [currentContactId, setCurrentContactId] = useState(null);
   const [currentContactProject, setCurrentContactProject] = useState(null);
   const [newNote, setNewNote] = useState("");
+  const [loading, setLoading] = useState(true); // فقط این اضافه شد
   const { id } = useParams();
-  
+
   useEffect(() => {
     fetchContacts();
   }, []);
@@ -32,8 +34,8 @@ export default function CallHistory() {
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
-        console.error("توکن احراز هویت یافت نشد در localStorage");
         alert("توکن احراز هویت یافت نشد. لطفاً ابتدا وارد سیستم شوید.");
+        setLoading(false);
         return;
       }
       const response = await fetch(
@@ -48,31 +50,24 @@ export default function CallHistory() {
       );
       if (response.ok) {
         const data = await response.json();
-        console.log("پاسخ کامل API برای fetchContacts:", data);
         if (data.results && Array.isArray(data.results)) {
           setList(data.results);
           setFilterList(data.results);
         } else {
-          console.error("داده‌های دریافت‌شده در فرمت مورد انتظار نیستند");
           setList([]);
           setFilterList([]);
         }
       } else {
-        const errorData = await response.json();
-        console.error("خطا در دریافت داده‌ها:", response.status, errorData);
-        alert(
-          `خطا در دریافت داده‌ها: ${errorData.detail || response.statusText}`
-        );
         setList([]);
         setFilterList([]);
       }
     } catch (error) {
-      console.error("خطا در اتصال به API:", error);
       alert("خطا در اتصال به سرور. لطفاً دوباره تلاش کنید.");
+    } finally {
+      setLoading(false); // لودینگ تموم شد
     }
   };
 
-  console.log(list);
   function handelChange(event) {
     const value = event.target.value;
     setControl(value);
@@ -91,9 +86,9 @@ export default function CallHistory() {
     setNewNote("");
     setCurrentContactId(null);
   };
-  const handleSendId = (contactIdPerson , contactIdProject) => {
-    console.log("شناسه مخاطب انتخاب‌شده:", contactIdPerson);
-    setCurrentContactProject(contactIdProject)
+
+  const handleSendId = (contactIdPerson, contactIdProject) => {
+    setCurrentContactProject(contactIdProject);
     setCurrentContactId(contactIdPerson);
     setShowModal(true);
   };
@@ -103,24 +98,31 @@ export default function CallHistory() {
       alert("لطفاً یادداشت را وارد کنید.");
       return;
     }
-
     const token = localStorage.getItem("authToken");
     if (!token) {
-      console.error("توکن احراز هویت یافت نشد");
       alert("توکن احراز هویت یافت نشد. لطفاً ابتدا وارد سیستم شوید.");
       return;
     }
-
     const currentItem = filterList.find(
       (item) => item.contact.id === currentContactId
     );
     const formatDate = moment().locale("fa").format("D MMMM YYYY");
-    console.log(currentItem.contact.id);
-    const callerId = currentItem.caller?.id
-    // console.log(callerId);
-    // console.log(newNote);
-    // console.log(currentItem.id);
-    console.log(currentItem.notes);
+    // استخراج یادداشت قبلی به شکل امن
+    let previousNoteText = "";
+    if (currentItem.notes) {
+      const parts = currentItem.notes.split("[یادداشت جدید]");
+      if (parts.length > 1) {
+        const lastPart = parts[parts.length - 1];
+        previousNoteText = lastPart.replace(/\[تاریخ\]:.*$/, "").trim();
+      } else {
+        previousNoteText = currentItem.notes
+          .replace(/\[تاریخ\]:.*$/, "")
+          .trim();
+      }
+    }
+    const combinedNotes = `[یادداشت قبلی]: ${previousNoteText}
+[تاریخ]: ${formatDate}
+[یادداشت جدید]: ${newNote}`;
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/calls/${currentItem.id}/`,
@@ -132,32 +134,22 @@ export default function CallHistory() {
           },
           body: JSON.stringify({
             contact_id: currentItem.contact.id,
-            caller_id: callerId,
+            caller_id: currentItem.caller?.id,
             project_id: id,
-            notes: newNote
+            notes: combinedNotes,
           }),
         }
       );
-
       if (response.ok) {
-        const data = await response.json();
-        console.log("پاسخ موفق API برای افزودن یادداشت:", data);
         await fetchContacts();
         handleCloseModal();
       } else {
         const errorData = await response.json();
-        console.error("خطا در افزودن یادداشت:", response.status, errorData);
         alert(
-          `خطا در افزودن یادداشت: ${
-            errorData.call_result?.[0] ||
-            errorData.message ||
-            errorData.detail ||
-            response.statusText
-          }`
+          `خطا در افزودن یادداشت: ${errorData.detail || response.statusText}`
         );
       }
     } catch (error) {
-      console.error("خطا در اتصال به API:", error);
       alert("خطا در اتصال به سرور. لطفاً دوباره تلاش کنید.");
     }
   };
@@ -166,155 +158,167 @@ export default function CallHistory() {
     <>
       <NavigationBar />
       <Container dir="rtl" className="my-4">
-        <Card>
-          <Card.Header className="text-center">
-            <h4>
-              <BsClockHistory className="text-info mx-2" />
-              تاریخچه تماس کاربر
-            </h4>
-          </Card.Header>
-          <Card.Body>
-            <Form>
-              <Form.Group>
-                <Form.Control
-                  type="text"
-                  placeholder="لطفا نام مورد نظر را وارد کنید..."
-                  value={control}
-                  onChange={handelChange}
-                />
-              </Form.Group>
-            </Form>
-            <div className="mt-4">
-              {filterList.length === 0 ? (
-                <Card className="mt-5 mb-3 text-center mx-5">
-                  <h4 className="mt-4">مخاطب جدیدی برای شما وجود ندارد</h4>
-                  <p className="text-secondary">
-                    در حال حاضر هیچ مخاطب تخصیص یافته‌ای برای تماس وجود ندارد.
-                  </p>
-                </Card>
-              ) : (
-                filterList.map((item) => (
-                  <Card key={item.id} className="mt-4 shadow-sm">
-                    <Card.Header className="text-center bg-light">
-                      <h5>اطلاعات کاربر</h5>
-                    </Card.Header>
-                    <Card.Body>
-                      <Row className="mb-3">
-                        <Col md={6} lg={4}>
-                          <strong>نام کامل:</strong>{" "}
-                          {item.contact?.full_name || "نامشخص"}
-                        </Col>
-                        <Col md={6} lg={4}>
-                          <strong>شماره تماس:</strong>{" "}
-                          {item.contact?.phone || "نامشخص"}
-                        </Col>
-                        <Col md={6} lg={4}>
-                          <strong>ایمیل:</strong>{" "}
-                          {item.contact?.email || "نامشخص"}
-                        </Col>
-                        <Col md={6} lg={4}>
-                          <strong>آدرس:</strong>{" "}
-                          {item.contact?.address || "نامشخص"}
-                        </Col>
-                        <Col md={6} lg={4}>
-                          <strong>تاریخ تولد:</strong>{" "}
-                          {item.contact?.birth_date
-                            ? item.contact.birth_date
-                            : "نامشخص"}
-                        </Col>
-                        <Col md={6} lg={4}>
-                          <strong>جنسیت:</strong>{" "}
-                          {item.contact?.gender || "نامشخص"}
-                        </Col>
-                        <Col md={6} lg={4}>
-                          <strong>تماس گیرنده اختصاصی:</strong>{" "}
-                          {item.contact?.assigned_caller || "نامشخص"}
-                        </Col>
-                        <Col md={6} lg={4}>
-                          <strong>شماره تماس تماس گیرنده:</strong>{" "}
-                          {item.contact?.assigned_caller_phone || "نامشخص"}
-                        </Col>
-                        <Col md={6} lg={4}>
-                          <strong>وضعیت تماس:</strong>{" "}
-                          {item.contact?.call_status || "نامشخص"}
-                        </Col>
-                        <Col md={6} lg={4}>
-                          <strong>قابلیت تماس:</strong>{" "}
-                          {item.contact?.can_call ? "بله" : "خیر"}
-                        </Col>
-                        <Col md={12}>
-                          <strong>فیلدهای سفارشی:</strong>{" "}
-                          {item.contact?.custom_fields &&
-                          item.contact.custom_fields.trim() !== ""
-                            ? item.contact.custom_fields
-                            : "نامشخص"}
-                        </Col>
-                      </Row>
+        {loading ? (
+          <div className="text-center py-5 my-5">
+            <Spinner animation="border" variant="primary" size="lg" />
+            <p className="mt-3 text-muted fs-5">
+              در حال بارگذاری تاریخچه تماس...
+            </p>
+          </div>
+        ) : (
+          <Card>
+            <Card.Header className="text-center">
+              <h4>
+                <BsClockHistory className="text-info mx-2" />
+                تاریخچه تماس کاربر
+              </h4>
+            </Card.Header>
+            <Card.Body>
+              <Form>
+                <Form.Group>
+                  <Form.Control
+                    type="text"
+                    placeholder="لطفا نام مورد نظر را وارد کنید..."
+                    value={control}
+                    onChange={handelChange}
+                  />
+                </Form.Group>
+              </Form>
 
-                      <hr />
-                      <h6>یادداشت‌های تماس:</h6>
-                      {item.contact?.call_notes &&
-                      item.contact.call_notes.length > 0 ? (
-                        <ListGroup variant="flush">
-                          {item.contact.call_notes.map((note, idx) => (
-                            <ListGroup.Item
-                              key={idx}
-                              className="mb-2 p-3 bg-light rounded"
-                            >
-                              <p>
-                                <strong>تاریخ:</strong> {note.created_at}
-                              </p>
-                              <p>
-                                <strong>نتیجه تماس:</strong> {note.call_result}
-                              </p>
-                              <p>
-                                <strong>یادداشت:</strong>{" "}
-                                {note.note || "بدون یادداشت"}
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  className="mx-2"
-                                  onClick={() => handleSendId(item.contact.id , item.id)}
-                                >
-                                  ایجاد یادداشت جدید
-                                </Button>
-                              </p>
-                              {note.answers && note.answers.length > 0 && (
-                                <>
-                                  <strong>پاسخ‌ها:</strong>
-                                  <ul>
-                                    {note.answers.map((answer, aIdx) => (
-                                      <li key={aIdx}>
-                                        سوال: {answer.question_text} - پاسخ:{" "}
-                                        {answer.selected_choice_text}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </>
-                              )}
-                            </ListGroup.Item>
-                          ))}
-                        </ListGroup>
-                      ) : (
-                        <p>
-                          هیچ یادداشتی برای این کاربر وجود ندارد.
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            className="mx-2"
-                            onClick={() => handleSendId(item.id)}
-                          >
-                            ایجاد یادداشت جدید
-                          </Button>
-                        </p>
-                      )}
-                    </Card.Body>
+              <div className="mt-4">
+                {filterList.length === 0 ? (
+                  <Card className="mt-5 mb-3 text-center mx-5">
+                    <h4 className="mt-4">مخاطب جدیدی برای شما وجود ندارد</h4>
+                    <p className="text-secondary">
+                      در حال حاضر هیچ مخاطب تخصیص یافته‌ای برای تماس وجود ندارد.
+                    </p>
                   </Card>
-                ))
-              )}
-            </div>
-          </Card.Body>
-        </Card>
+                ) : (
+                  filterList.map((item) => (
+                    <Card key={item.id} className="mt-4 shadow-sm">
+                      <Card.Header className="text-center bg-light">
+                        <h5>اطلاعات کاربر</h5>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-3">
+                          <Col md={6} lg={4}>
+                            <strong>نام کامل:</strong>{" "}
+                            {item.contact?.full_name || "نامشخص"}
+                          </Col>
+                          <Col md={6} lg={4}>
+                            <strong>شماره تماس:</strong>{" "}
+                            {item.contact?.phone || "نامشخص"}
+                          </Col>
+                          <Col md={6} lg={4}>
+                            <strong>ایمیل:</strong>{" "}
+                            {item.contact?.email || "نامشخص"}
+                          </Col>
+                          <Col md={6} lg={4}>
+                            <strong>آدرس:</strong>{" "}
+                            {item.contact?.address || "نامشخص"}
+                          </Col>
+                          <Col md={6} lg={4}>
+                            <strong>تاریخ تولد:</strong>{" "}
+                            {item.contact?.birth_date || "نامشخص"}
+                          </Col>
+                          <Col md={6} lg={4}>
+                            <strong>جنسیت:</strong>{" "}
+                            {item.contact?.gender || "نامشخص"}
+                          </Col>
+                          <Col md={6} lg={4}>
+                            <strong>تماس گیرنده اختصاصی:</strong>{" "}
+                            {item.contact?.assigned_caller || "نامشخص"}
+                          </Col>
+                          <Col md={6} lg={4}>
+                            <strong>شماره تماس تماس گیرنده:</strong>{" "}
+                            {item.contact?.assigned_caller_phone || "نامشخص"}
+                          </Col>
+                          <Col md={6} lg={4}>
+                            <strong>وضعیت تماس:</strong>{" "}
+                            {item.contact?.call_status || "نامشخص"}
+                          </Col>
+                          <Col md={6} lg={4}>
+                            <strong>قابلیت تماس:</strong>{" "}
+                            {item.contact?.can_call ? "بله" : "خیر"}
+                          </Col>
+                          <Col md={12}>
+                            <strong>فیلدهای سفارشی:</strong>{" "}
+                            {item.contact?.custom_fields &&
+                            item.contact.custom_fields.trim() !== ""
+                              ? item.contact.custom_fields
+                              : "نامشخص"}
+                          </Col>
+                        </Row>
+                        <hr />
+                        <h6>یادداشت‌های تماس:</h6>
+                        {item.contact?.call_notes &&
+                        item.contact.call_notes.length > 0 ? (
+                          <ListGroup variant="flush">
+                            {item.contact.call_notes.map((note, idx) => (
+                              <ListGroup.Item
+                                key={idx}
+                                className="mb-2 p-3 bg-light rounded"
+                              >
+                                <p>
+                                  <strong>تاریخ:</strong> {note.created_at}
+                                </p>
+                                <p>
+                                  <strong>نتیجه تماس:</strong>{" "}
+                                  {note.call_result}
+                                </p>
+                                <p>
+                                  <strong>یادداشت:</strong>{" "}
+                                  {note.note || "بدون یادداشت"}
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    className="mx-2"
+                                    onClick={() =>
+                                      handleSendId(item.contact.id, item.id)
+                                    }
+                                  >
+                                    ایجاد یادداشت جدید
+                                  </Button>
+                                </p>
+                                {note.answers && note.answers.length > 0 && (
+                                  <>
+                                    <strong>پاسخ‌ها:</strong>
+                                    <ul>
+                                      {note.answers.map((answer, aIdx) => (
+                                        <li key={aIdx}>
+                                          سوال: {answer.question_text} - پاسخ:{" "}
+                                          {answer.selected_choice_text}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </>
+                                )}
+                              </ListGroup.Item>
+                            ))}
+                          </ListGroup>
+                        ) : (
+                          <p>
+                            هیچ یادداشتی برای این کاربر وجود ندارد.
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              className="mx-2"
+                              onClick={() =>
+                                handleSendId(item.contact.id, item.id)
+                              }
+                            >
+                              ایجاد یادداشت جدید
+                            </Button>
+                          </p>
+                        )}
+                      </Card.Body>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+        )}
 
         {/* Modal for adding new note */}
         <Modal show={showModal} onHide={handleCloseModal} centered dir="rtl">

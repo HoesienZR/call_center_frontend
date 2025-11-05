@@ -8,6 +8,7 @@ import {
   Button,
   Modal,
   Form,
+  Spinner,
 } from "react-bootstrap";
 import moment from "jalali-moment";
 import { BsFillFileEarmarkTextFill } from "react-icons/bs";
@@ -16,7 +17,7 @@ import {API_BASE_URL} from "../config.js";
 
 export default function Project() {
   const [listItem, setListItem] = useState([]);
-  const [usersData, setUsersData] = useState([]); // state جدید برای داده‌های کاربران
+  const [usersData, setUsersData] = useState([]);
   const [showmodal, setShowModal] = useState(false);
   const [showModalDelete, setShowModalDelete] = useState(false);
   const [getdata, setGetData] = useState(false);
@@ -24,78 +25,70 @@ export default function Project() {
   const [projectname, setProjectName] = useState("");
   const [caption, setCaption] = useState("");
   const [questionsData, setQuestionsData] = useState([]);
-  const formatDate = moment().locale("fa").format("D MMMM YYYY");
-
+  const [loading, setLoading] = useState(true); // فقط این اضافه شد
   const user = JSON.parse(localStorage.getItem("user"));
   const token = localStorage.getItem("authToken");
 
   // دریافت پروژه‌ها
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/projects/`, {
-      method: "GET",
-      headers: {
-        Authorization: `Token ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => {
+    const fetchProjects = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/projects/`, {
+          method: "GET",
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Raw API response (projects):", data);
+        const data = await response.json();
         if (data.results && Array.isArray(data.results)) {
           setListItem(data.results);
-          console.log("Processed listItem:", data.results);
         } else {
           setListItem([]);
-          console.log("No valid results found in API response");
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Error fetching projects:", error);
         setListItem([]);
-      });
-  }, [getdata]);
+      }
+    };
 
-  // دریافت اطلاعات کاربران
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/api/users/`, {
-      method: "GET",
-      headers: {
-        Authorization: `Token ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/users/`, {
+          method: "GET",
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Raw API response (users):", data);
+        const data = await response.json();
         if (data.results && Array.isArray(data.results)) {
           setUsersData(data.results);
-          console.log("Processed usersData:", data.results);
         } else {
           setUsersData([]);
-          console.log("No valid users found in API response");
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Error fetching users:", error);
         setUsersData([]);
-      });
-  }, []);
+      } finally {
+        setLoading(false); // لودینگ تموم شد (بعد از هر دو API)
+      }
+    };
+
+    fetchProjects();
+    fetchUsers();
+  }, [getdata, token]);
 
   // یافتن کاربر کنونی و بررسی can_create_projects
   const currentUser = usersData.find((u) => u.username === user?.username);
   const canCreateProjects = currentUser?.can_create_projects || false;
 
-  // بقیه توابع fetchQuestions، handleDelete، EditHandler و ... بدون تغییر باقی می‌مانند
   const fetchQuestions = async (projectId) => {
     try {
       const response = await fetch(
@@ -112,7 +105,6 @@ export default function Project() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log("Questions response:", data);
       if (data.results && Array.isArray(data.results)) {
         setQuestionsData(
           data.results.map((q) => ({
@@ -161,14 +153,6 @@ export default function Project() {
         alert("لطفاً تمام سوالات و پاسخ‌ها را پر کنید.");
         return;
       }
-
-      console.log("Sending project update:", {
-        name: projectname,
-        description: caption,
-        created_by_id: user.id,
-      });
-      console.log("Sending questions data:", questionsData);
-
       const userInfoNew = {
         name: projectname,
         description: caption,
@@ -187,7 +171,6 @@ export default function Project() {
       );
       if (!projectResponse.ok) {
         const errorData = await projectResponse.json();
-        console.error("Project update error:", errorData);
         throw new Error(
           `HTTP error! status: ${
             projectResponse.status
@@ -195,15 +178,9 @@ export default function Project() {
         );
       }
       const updatedProject = await projectResponse.json();
-      console.log("Project update response:", updatedProject);
-
       for (const qData of questionsData) {
         let questionId = qData.id;
         if (qData.id) {
-          console.log("Updating question:", {
-            project_id: userid,
-            text: qData.text,
-          });
           const questionResponse = await fetch(
             `${API_BASE_URL}/api/projects/${userid}/questions/${qData.id}/`,
             {
@@ -220,16 +197,11 @@ export default function Project() {
           );
           if (!questionResponse.ok) {
             const errorData = await questionResponse.json();
-            console.error("Question update error:", errorData);
             throw new Error(
               `Failed to update question: ${JSON.stringify(errorData)}`
             );
           }
         } else {
-          console.log("Creating new question:", {
-            project_id: userid,
-            text: qData.text,
-          });
           const questionResponse = await fetch(
             `${API_BASE_URL}/api/projects/${userid}/questions/`,
             {
@@ -246,22 +218,15 @@ export default function Project() {
           );
           if (!questionResponse.ok) {
             const errorData = await questionResponse.json();
-            console.error("Question creation error:", errorData);
             throw new Error(
               `Failed to create question: ${JSON.stringify(errorData)}`
             );
           }
           const questionData = await questionResponse.json();
           questionId = questionData.id;
-          console.log("Question creation response:", questionData);
         }
-
         for (const answer of qData.answers) {
           if (answer.id) {
-            console.log("Updating choice:", {
-              question_id: questionId,
-              text: answer.text,
-            });
             const choiceResponse = await fetch(
               `${API_BASE_URL}/api/projects/${userid}/questions/${questionId}/choices/${answer.id}/`,
               {
@@ -278,17 +243,11 @@ export default function Project() {
             );
             if (!choiceResponse.ok) {
               const errorData = await choiceResponse.json();
-              console.error("Choice update error:", errorData);
               throw new Error(
                 `Failed to update choice: ${JSON.stringify(errorData)}`
               );
             }
-            console.log("Choice update response:", await choiceResponse.json());
           } else {
-            console.log("Creating new choice:", {
-              question_id: questionId,
-              text: answer.text,
-            });
             const choiceResponse = await fetch(
               `${API_BASE_URL}/api/projects/${userid}/questions/${questionId}/choices/`,
               {
@@ -305,19 +264,13 @@ export default function Project() {
             );
             if (!choiceResponse.ok) {
               const errorData = await choiceResponse.json();
-              console.error("Choice creation error:", errorData);
               throw new Error(
                 `Failed to create choice: ${JSON.stringify(errorData)}`
               );
             }
-            console.log(
-              "Choice creation response:",
-              await choiceResponse.json()
-            );
           }
         }
       }
-
       setListItem((prev) =>
         prev.map((item) =>
           item.id === userid ? { ...item, ...updatedProject } : item
@@ -357,7 +310,6 @@ export default function Project() {
   const handleDeleteQuestion = async (qIndex, qId) => {
     try {
       if (qId) {
-        console.log("Deleting question ID:", qId);
         await fetch(
           `${API_BASE_URL}/api/projects/${userid}/questions/${qId}/`,
           {
@@ -381,7 +333,6 @@ export default function Project() {
     try {
       const answerId = questionsData[qIndex].answers[aIndex].id;
       if (answerId) {
-        console.log("Deleting choice ID:", answerId);
         await fetch(
           `${API_BASE_URL}/api/projects/${userid}/questions/${questionsData[qIndex].id}/choices/${answerId}/`,
           {
@@ -408,48 +359,50 @@ export default function Project() {
     <>
       <NavigationBar />
       <Container dir="rtl">
-        <Card className="mt-5 p-3">
-          <Card.Header className="d-flex justify-content-between">
-            <div className="mt-1" style={{ fontSize: "20px" }}>
-              <BsFillFileEarmarkTextFill className="text-success" />
-              مدیریت پروژه‌ها
-            </div>
-            <div>
-              {canCreateProjects && (
-                <Link to="/project/create" className="btn btn-success">
-                  ایجاد پروژه جدید
-                </Link>
-              )}
-              {!canCreateProjects && usersData.length > 0 && (
-                <p className="text-danger">
-                  شما اجازه ایجاد پروژه جدید ندارید.
-                </p>
-              )}
-            </div>
-          </Card.Header>
-          <Card.Body>
-            {listItem.length === 0 ? (
-              <div className="text-center mt-5">
-                <h4>
-                  <BsFillFileEarmarkTextFill className="text-success" />
-                  مدیریت پروژه‌ها
-                </h4>
-                <p className="mb-0 mt-4">
-                  در حال حاضر هیچ پروژه‌ای برای نمایش وجود ندارد
-                </p>
+        {loading ? (
+          <div className="text-center py-5 my-5">
+            <Spinner animation="border" variant="primary" size="lg" />
+            <p className="mt-3 text-muted fs-5">در حال بارگذاری پروژه‌ها...</p>
+          </div>
+        ) : (
+          <Card className="mt-5 p-3">
+            <Card.Header className="d-flex justify-content-between">
+              <div className="mt-1" style={{ fontSize: "20px" }}>
+                مدیریت پروژه‌ها
               </div>
-            ) : (
               <div>
-                <Row>
-                  {listItem.map((item, index) => {
-                    console.log("Rendering item:", item);
-                    return (
+                {canCreateProjects && (
+                  <Link to="/project/create" className="btn btn-success">
+                    ایجاد پروژه جدید
+                  </Link>
+                )}
+                {!canCreateProjects && usersData.length > 0 && (
+                  <p className="text-danger">
+                    شما اجازه ایجاد پروژه جدید ندارید.
+                  </p>
+                )}
+              </div>
+            </Card.Header>
+            <Card.Body>
+              {listItem.length === 0 ? (
+                <div className="text-center mt-5">
+                  <h4>مدیریت پروژه‌ها</h4>
+                  <p className="mb-0 mt-4">
+                    در حال حاضر هیچ پروژه‌ای برای نمایش وجود ندارد
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <Row>
+                    {listItem.map((item, index) => (
                       <Col xl="4" lg="6" md="6" sm="12" key={item.id || index}>
                         <Card className="mt-5">
                           <Card.Body>
                             <div className="d-flex justify-content-between">
                               <h5>{item.name || "بدون نام"}</h5>
-                              <p className="text-secondary">{formatDate}</p>
+                              <p className="text-secondary">
+                                {item.persian_created_at || "تاریخ نامشخص"}
+                              </p>
                             </div>
                             <h6>{item.description || "بدون توضیحات"}</h6>
                             <div className="mt-4">
@@ -489,13 +442,15 @@ export default function Project() {
                           </Card.Body>
                         </Card>
                       </Col>
-                    );
-                  })}
-                </Row>
-              </div>
-            )}
-          </Card.Body>
-        </Card>
+                    ))}
+                  </Row>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        )}
+
+        {/* مودال حذف */}
         <Modal
           show={showModalDelete}
           backdrop="static"
@@ -516,6 +471,8 @@ export default function Project() {
             </div>
           </Modal.Body>
         </Modal>
+
+        {/* مودال ویرایش */}
         <Modal
           show={showmodal}
           backdrop="static"

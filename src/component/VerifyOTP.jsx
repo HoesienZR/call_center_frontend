@@ -24,7 +24,6 @@ export default function VerifyOTP() {
       setTimer((prev) => {
         if (prev <= 1) {
           clearInterval(countdown);
-          console.log("زمان تمام شد، بازگشت به /login");
           navigate("/login");
           return 0;
         }
@@ -56,7 +55,6 @@ export default function VerifyOTP() {
         phone : phone?.trim(), 
         otp: otp.trim().toString()
     };
-      console.log("داده‌های ارسالی به API:", JSON.stringify(payload));
 
       const response = await fetch(`${API_BASE_URL}/api/verify-otp/`, {
         method: "POST",
@@ -68,9 +66,7 @@ export default function VerifyOTP() {
       });
 
       // دیباگ: نمایش وضعیت و پاسخ کامل
-      console.log("وضعیت پاسخ:", response.status, response.statusText);
       const data = await response.json();
-      console.log("پاسخ API:", data);
 
       if (response.ok) {
         // بررسی وجود فیلدهای مورد نیاز
@@ -90,7 +86,6 @@ export default function VerifyOTP() {
           })
         );
         setOtp("");
-        console.log("تأیید موفق، هدایت به /home");
         navigate("/home");
       } else {
         setError(data.message || "کد تأیید نامعتبر است.");

@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from "react";
 import NavigationBar from "./NavigationBar";
-import { Button, Card, Container, Form, Modal } from "react-bootstrap";
+import {
+  Button,
+  Card,
+  Container,
+  Form,
+  Modal,
+  Row,
+  Col,
+  Spinner,
+} from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaUserGroup } from "react-icons/fa6";
 import {API_BASE_URL} from "../config.js";
@@ -12,16 +21,32 @@ export default function CallRequest() {
   const [modalShow, setModalShow] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
   const [buttonStates, setButtonStates] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [currentUserPhone, setCurrentUserPhone] = useState(""); // شماره کاربر لاگین‌شده
   const { id } = useParams();
   const navigate = useNavigate();
-
   const user = JSON.parse(localStorage.getItem("user"));
-  
+
   useEffect(() => {
     fetchContacts();
   }, [id]);
 
+  // --- دریافت شماره کاربر لاگین‌شده از localStorage ---
+  useEffect(() => {
+    // از لاگ شما: user.phone_number = "09173509639"
+    if (user?.phone_number) {
+      setCurrentUserPhone(user.phone_number);
+    } else if (user?.phonenumber) {
+      setCurrentUserPhone(user.phonenumber);
+    } else if (user?.phone) {
+      setCurrentUserPhone(user.phone);
+    } else {
+      setCurrentUserPhone("");
+    }
+  }, [user]);
+
   const fetchContacts = async () => {
+    setLoading(true);
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/contacts/?project_id=${id}`,
@@ -35,19 +60,14 @@ export default function CallRequest() {
       );
       if (response.ok) {
         const data = await response.json();
-        console.log(data);
         if (data.results && Array.isArray(data.results)) {
           setList(data.results);
           setFilterList(data.results);
-          // تنظیم حالت اولیه دکمه‌ها برای هر مخاطب
+
           const initialButtonStates = data.results.reduce((acc, item) => {
-            console.log(item.assigned_caller_phone);
-            console.log(user.phone);
-          const isAuthorized = item.assigned_caller_phone === user?.phonenumber;
             acc[item.id] = {
               text: "تماس",
               variant: "success",
-              isAuthorized, // اضافه کردن ویژگی برای بررسی مجوز
             };
             return acc;
           }, {});
@@ -66,13 +86,20 @@ export default function CallRequest() {
       console.error("خطا در اتصال به API:", error);
       setList([]);
       setFilterList([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteContact = async (contactId) => {
+  const handleDeleteContact = async (contactId, assignedCallerPhone) => {
+    if (!currentUserPhone || currentUserPhone !== assignedCallerPhone) {
+      alert("شما مسئول این مخاطب نیستید و اجازه رد کردن ندارید.");
+      return;
+    }
+
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/api/contacts/${contactId}/release/`,
+        `${API_BASE_URL}/api/contacts/${contactId}/release/`,
         {
           method: "POST",
           headers: {
@@ -114,7 +141,7 @@ export default function CallRequest() {
     try {
       const project = { project_id: id };
       const postResponse = await fetch(
-        "http://127.0.0.1:8000/api/contacts/request_new/",
+        `${API_BASE_URL}/api/contacts/request_new/`,
         {
           method: "POST",
           headers: {
@@ -124,13 +151,11 @@ export default function CallRequest() {
           body: JSON.stringify(project),
         }
       );
-
       if (!postResponse.ok) {
         const errorData = await postResponse.json();
         throw new Error(errorData.message || "خطا در ارسال درخواست تماس");
       }
-
-      const responseData = await postResponse.json();
+      await postResponse.json();
       await fetchContacts();
       alert("درخواست تماس با موفقیت ثبت شد و مخاطب جدید اضافه شد!");
     } catch (error) {
@@ -140,28 +165,31 @@ export default function CallRequest() {
   }
 
   const handleShowModal = (contact) => {
-    console.log("Selected Contact:", contact);
     setSelectedContact(contact);
     setModalShow(true);
   };
 
   const handleTextClick = (contact) => {
+    const assignedPhone = contact.assigned_caller_phone;
+
+    if (!currentUserPhone || currentUserPhone !== assignedPhone) {
+      alert("شما مسئول این مخاطب نیستید و اجازه تماس ندارید.");
+      return;
+    }
+
     setButtonStates((prev) => ({
       ...prev,
       [contact.id]: {
         text: "در حال انجام تماس...",
         variant: "primary",
-        isAuthorized: prev[contact.id].isAuthorized,
       },
     }));
-
     setTimeout(() => {
       setButtonStates((prev) => ({
         ...prev,
         [contact.id]: {
           text: "تماس",
           variant: "success",
-          isAuthorized: prev[contact.id].isAuthorized,
         },
       }));
       navigate(`/project/${id}/call-feedback`, {
@@ -178,23 +206,24 @@ export default function CallRequest() {
     <>
       <NavigationBar />
       <Container dir="rtl">
-        <Card className="mx-4 mt-5">
-          <Card.Body>
-            <div className="d-flex justify-content-between mx-3">
-              <div>
+        {loading ? (
+          <div className="text-center py-5 my-5">
+            <Spinner animation="border" variant="primary" size="lg" />
+            <p className="mt-3 text-muted fs-5">در حال بارگذاری مخاطبین...</p>
+          </div>
+        ) : (
+          <Card className="mx-4 mt-5">
+            <Card.Body>
+              <div className="d-flex justify-content-between mx-3">
                 <h4 className="text-center" style={{ color: "blue" }}>
                   درخواست تماس‌ها
                 </h4>
-              </div>
-              <div>
                 <Button variant="primary" onClick={handleSendId}>
                   درخواست تماس
                 </Button>
               </div>
-            </div>
-          </Card.Body>
-          <Card.Body>
-            <div className="mt-3">
+            </Card.Body>
+            <Card.Body>
               <Form onSubmit={handleSubmit}>
                 <Form.Control
                   type="text"
@@ -207,144 +236,163 @@ export default function CallRequest() {
               <div className="mt-4">
                 <h5>لیست مخاطبین ({filterList.length}) مخاطب</h5>
               </div>
+              {filterList.length === 0 ? (
+                <Card className="mt-5 mb-3 text-center mx-5">
+                  <h4 className="mt-4">مخاطب جدیدی برای شما وجود ندارد</h4>
+                  <p className="text-secondary">
+                    در حال حاضر هیچ مخاطب تخصیص یافته‌ای برای تماس وجود ندارد.
+                  </p>
+                </Card>
+              ) : (
+                filterList.map((item) => {
+                  const isOwner =
+                    currentUserPhone === item.assigned_caller_phone;
+
+                  return (
+                    <Card key={item.id} className="mt-3 shadow-sm">
+                      <Card.Body>
+                        <Row className="align-items-center gy-3 text-center text-md-start">
+                          <Col xs={12} md={3}>
+                            <h6 className="mb-0">
+                              <strong>نام:</strong> {item.full_name}
+                            </h6>
+                          </Col>
+                          <Col xs={12} md={3}>
+                            <h6 className="mb-0">
+                              <strong>شماره:</strong> {item.phone}
+                            </h6>
+                          </Col>
+                          <Col xs={12} md={6}>
+                            <div className="d-flex flex-wrap justify-content-center justify-content-md-end gap-2">
+                              <Button
+                                variant="info"
+                                size="sm"
+                                className="text-white"
+                                onClick={() => handleShowModal(item)}
+                              >
+                                اطلاعات
+                              </Button>
+
+                              {/* دکمه تماس */}
+                              <Button
+                                variant={
+                                  buttonStates[item.id]?.variant || "success"
+                                }
+                                size="sm"
+                                href={isOwner ? `tel:${item.phone}` : undefined}
+                                title={
+                                  isOwner
+                                    ? `تماس با ${item.full_name}`
+                                    : "شما مسئول این مخاطب نیستید"
+                                }
+                                onClick={() => handleTextClick(item)}
+                                disabled={!isOwner}
+                              >
+                                {buttonStates[item.id]?.text || "تماس"}
+                              </Button>
+
+                              {/* دکمه رد کردن */}
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() =>
+                                  handleDeleteContact(
+                                    item.id,
+                                    item.assigned_caller_phone
+                                  )
+                                }
+                                title={
+                                  isOwner
+                                    ? `رد کردن ${item.full_name}`
+                                    : "شما مسئول این مخاطب نیستید"
+                                }
+                                disabled={!isOwner}
+                              >
+                                رد کردن
+                              </Button>
+                            </div>
+                          </Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+                  );
+                })
+              )}
+            </Card.Body>
+          </Card>
+        )}
+        <Modal
+          show={modalShow}
+          onHide={() => setModalShow(false)}
+          style={{ direction: "rtl" }}
+        >
+          <Modal.Body>
+            <div className="text-center">
+              <h5>اطلاعات</h5>
             </div>
-            {filterList.length === 0 ? (
-              <Card className="mt-5 mb-3 text-center mx-5">
-                <h4 className="mt-4">مخاطب جدیدی برای شما وجود ندارد</h4>
-                <p className="text-secondary">
-                  در حال حاضر هیچ مخاطب تخصیص یافته‌ای برای تماس وجود ندارد.
-                </p>
-              </Card>
-            ) : (
-              filterList.map((item) => (
-                <Card key={item.id} className="mt-4">
-                  <Card.Body>
-                    <div className="d-flex justify-content-around align-items-center">
-                      <div>
-                        <h6>نام و نام خانوادگی: {item.full_name}</h6>
-                      </div>
-                      <div>
-                        <h6>شماره تلفن: {item.phone}</h6>
-                      </div>
-                      <div>
-                        <Button
-                          variant="info"
-                          className="text-white"
-                          onClick={() => handleShowModal(item)}
-                        >
-                          اطلاعات
-                        </Button>
-                      </div>
-                      {buttonStates[item.id]?.isAuthorized ? (
-                        <>
-                          <div>
-                            <Button
-                              variant={
-                                buttonStates[item.id]?.variant || "success"
-                              }
-                              href={`tel:${item.phone}`}
-                              title={`تماس با ${item.full_name}`}
-                              onClick={() => handleTextClick(item)}
-                            >
-                              {buttonStates[item.id]?.text || "تماس"}
-                            </Button>
-                          </div>
-                          <div>
-                            <Button
-                              variant="danger"
-                              onClick={() => handleDeleteContact(item.id)}
-                              title={`رد کردن ${item.full_name}`}
-                            >
-                              رد کردن
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <div>
-                          <p className="text-secondary mt-3">
-                            شما مجاز به تماس یا رد کردن نیستید
+            <div className="d-flex mt-4">
+              <p className="text-secondary">تماس گیرنده مسئول:</p>
+              <p className="text-primary mx-2">
+                {user?.username} <FaUserGroup className="mx-1" />
+              </p>
+            </div>
+            <div className="mt-2">
+              <p className="text-secondary">یادداشت‌های تماس:</p>
+              <p style={{ fontSize: "14px" }}>
+                آدرس سکونت: {selectedContact?.address || "آدرس نامشخص"}
+              </p>
+              <p style={{ fontSize: "14px" }}>
+                شماره تماس گیرنده:{" "}
+                {selectedContact?.assigned_caller_phone || "شماره نامشخص"}
+              </p>
+              <p style={{ fontSize: "14px" }}>
+                جنسیت: {selectedContact?.gender || "نامشخص"}
+              </p>
+              <p style={{ fontSize: "14px" }}>
+                فیلدهای سفارشی: {selectedContact?.custom_fields || "نامشخص"}
+              </p>
+              {selectedContact?.call_notes?.length > 0 ? (
+                selectedContact.call_notes.map((note, index) => (
+                  <div key={index} className="mt-2">
+                    <p style={{ fontSize: "14px" }}>
+                      یادداشت: {note.note || "نامشخص"}
+                    </p>
+                    <p style={{ fontSize: "14px" }}>
+                      تاریخ ایجاد: {note.created_at || "نامشخص"}
+                    </p>
+                    <p style={{ fontSize: "14px" }}>
+                      نتیجه تماس: {note.call_result || "نامشخص"}
+                    </p>
+                    <p style={{ fontSize: "14px" }}>پاسخ‌ها:</p>
+                    {note.answers?.length > 0 ? (
+                      note.answers.map((answer, ansIndex) => (
+                        <div key={ansIndex} style={{ marginRight: "20px" }}>
+                          <p style={{ fontSize: "14px" }}>
+                            سوال: {answer.question_text || "نامشخص"}
+                          </p>
+                          <p style={{ fontSize: "14px" }}>
+                            پاسخ انتخاب شده:{" "}
+                            {answer.selected_choice_text || "نامشخص"}
                           </p>
                         </div>
-                      )}
-                    </div>
-                  </Card.Body>
-                </Card>
-              ))
-            )}
-          </Card.Body>
-        </Card>
+                      ))
+                    ) : (
+                      <p style={{ fontSize: "14px" }}>پاسخی ثبت نشده است</p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p style={{ fontSize: "14px" }}>یادداشتی ثبت نشده است</p>
+              )}
+            </div>
+            <div className="d-flex mt-2">
+              <p className="text-warning mx-2">
+                وضعیت: {selectedContact?.call_status || "وضعیت نامشخص"}
+              </p>
+            </div>
+          </Modal.Body>
+        </Modal>
       </Container>
-      <Modal
-        show={modalShow}
-        onHide={() => setModalShow(false)}
-        style={{ direction: "rtl" }}
-      >
-        <Modal.Body>
-          <div className="text-center">
-            <h5>اطلاعات</h5>
-          </div>
-          <div className="d-flex mt-4">
-            <p className="text-secondary">تماس گیرنده مسئول:</p>
-            <p className="text-primary mx-2">
-              {user?.username} <FaUserGroup className="mx-1" />
-            </p>
-          </div>
-          <div className="mt-2">
-            <p className="text-secondary">یادداشت‌های تماس:</p>
-            <p style={{ fontSize: "14px" }}>
-              آدرس سکونت: {selectedContact?.address || "آدرس نامشخص"}
-            </p>
-            <p style={{ fontSize: "14px" }}>
-              شماره تماس گیرنده:{" "}
-              {selectedContact?.assigned_caller_phone || "شماره نامشخص"}
-            </p>
-            <p style={{ fontSize: "14px" }}>
-              جنسیت: {selectedContact?.gender || "نامشخص"}
-            </p>
-            <p style={{ fontSize: "14px" }}>
-              فیلدهای سفارشی: {selectedContact?.custom_fields || "نامشخص"}
-            </p>
-            {selectedContact?.call_notes?.length > 0 ? (
-              selectedContact.call_notes.map((note, index) => (
-                <div key={index} className="mt-2">
-                  <p style={{ fontSize: "14px" }}>
-                    یادداشت: {note.note || "نامشخص"}
-                  </p>
-                  <p style={{ fontSize: "14px" }}>
-                    تاریخ ایجاد: {note.created_at || "نامشخص"}
-                  </p>
-                  <p style={{ fontSize: "14px" }}>
-                    نتیجه تماس: {note.call_result || "نامشخص"}
-                  </p>
-                  <p style={{ fontSize: "14px" }}>پاسخ‌ها:</p>
-                  {note.answers?.length > 0 ? (
-                    note.answers.map((answer, ansIndex) => (
-                      <div key={ansIndex} style={{ marginRight: "20px" }}>
-                        <p style={{ fontSize: "14px" }}>
-                          سوال: {answer.question_text || "نامشخص"}
-                        </p>
-                        <p style={{ fontSize: "14px" }}>
-                          پاسخ انتخاب شده:{" "}
-                          {answer.selected_choice_text || "نامشخص"}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p style={{ fontSize: "14px" }}>پاسخی ثبت نشده است</p>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p style={{ fontSize: "14px" }}>یادداشتی ثبت نشده است</p>
-            )}
-          </div>
-          <div className="d-flex mt-2">
-            <p className="text-warning mx-2">
-              وضعیت: {selectedContact?.call_status || "وضعیت نامشخص"}
-            </p>
-          </div>
-        </Modal.Body>
-      </Modal>
     </>
   );
 }

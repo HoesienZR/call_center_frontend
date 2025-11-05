@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import NavigationBar from "./NavigationBar";
-import { Button, Card, Col, Container, Form, Row } from "react-bootstrap";
+import {
+  Button,
+  Card,
+  Col,
+  Container,
+  Form,
+  Row,
+  Spinner,
+} from "react-bootstrap";
 import { FaUser, FaPhone } from "react-icons/fa";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {API_BASE_URL} from "../config.js";
@@ -9,13 +17,33 @@ export default function CallFeedBack() {
   const [callStatus, setCallStatus] = useState([
     { id: 1, value: "پاسخ داد", variant: "outline-secondary", key: "answered" },
     { id: 2, value: "در انتظار", variant: "outline-secondary", key: "pending" },
-    { id: 3, value: "پاسخ نداد", variant: "outline-secondary", key: "no_answer" },
-    { id: 4, value: "شماره اشتباه", variant: "outline-secondary", key: "wrong_number" },
+    {
+      id: 3,
+      value: "پاسخ نداد",
+      variant: "outline-secondary",
+      key: "no_answer",
+    },
+    {
+      id: 4,
+      value: "شماره اشتباه",
+      variant: "outline-secondary",
+      key: "wrong_number",
+    },
   ]);
   const [callResult, setCallResult] = useState([
-    { id: 1, value: "علاقه مند هست", variant: "outline-success", key: "interested" },
+    {
+      id: 1,
+      value: "علاقه مند هست",
+      variant: "outline-success",
+      key: "interested",
+    },
     { id: 2, value: "وقت ندارد", variant: "outline-success", key: "no_time" },
-    { id: 3, value: "علاقه مند نیست", variant: "outline-success", key: "not_interested" },
+    {
+      id: 3,
+      value: "علاقه مند نیست",
+      variant: "outline-success",
+      key: "not_interested",
+    },
   ]);
   const [questionsData, setQuestionsData] = useState([]);
   const [selectedAnswers, setSelectedAnswers] = useState({});
@@ -23,17 +51,15 @@ export default function CallFeedBack() {
   const [explain, setExplain] = useState("");
   const [selectedStatusId, setSelectedStatusId] = useState(null);
   const [selectResultId, setSelectResultId] = useState(null);
-
+  const [loading, setLoading] = useState(true); // فقط این اضافه شد
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-
   const {
     full_name = "نامشخص",
     phone = "نامشخص",
     contact_id = "نامشخص",
   } = location.state || {};
-
   const token = localStorage.getItem("authToken");
 
   useEffect(() => {
@@ -53,7 +79,6 @@ export default function CallFeedBack() {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log("Questions response:", data);
         if (data.results && Array.isArray(data.results)) {
           setQuestionsData(
             data.results.map((q) => ({
@@ -70,9 +95,10 @@ export default function CallFeedBack() {
       } catch (error) {
         console.error("Error fetching questions:", error);
         setQuestionsData([]);
+      } finally {
+        setLoading(false); // لودینگ تموم شد
       }
     };
-
     fetchQuestions();
   }, [id, token]);
 
@@ -112,8 +138,6 @@ export default function CallFeedBack() {
 
   function handleSubmit(event) {
     event.preventDefault();
-    console.log("Selected answers:", selectedAnswers);
-    console.log("Selected status ID:", selectedStatusId);
   }
 
   async function handlePostInfo() {
@@ -123,8 +147,6 @@ export default function CallFeedBack() {
         selected_choice: parseInt(answerId),
       })
     );
-    console.log("Contact ID:", contact_id);
-
     try {
       const project = {
         contact_id: contact_id,
@@ -134,19 +156,20 @@ export default function CallFeedBack() {
         answers: answers,
         notes: explain,
       };
-      const response = await fetch(`${API_BASE_URL}/api/calls/submit_call/`, {
-        method: "POST",
-        headers: {
-          Authorization: `Token ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(project),
-      });
-      console.log("Submit response:", response);
+      const response = await fetch(
+        `${API_BASE_URL}/api/calls/submit_call/`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Token ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(project),
+        }
+      );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      // Optionally, navigate or show success message
       navigate(`/project/${id}/call-request`);
     } catch (error) {
       console.error("Error submitting call feedback:", error);
@@ -157,150 +180,174 @@ export default function CallFeedBack() {
     <>
       <NavigationBar />
       <Container dir="rtl">
-        <Card className="mt-5 mb-3">
-          <Card.Body>
-            <Card className="mt-3 p-2">
-              <Card.Text className="text-center" style={{ fontSize: "20px" }}>
-                <FaUser
-                  className="mx-1 text-primary"
-                  style={{ fontSize: "13px" }}
-                />
-                خلاصه اطلاعات مخاطب
-              </Card.Text>
-              <Card.Body>
-                <Row className="text-center">
-                  <Col lg="6">
-                    <div>
-                      <p className="text-secondary">نام و نام خانوادگی:</p>
-                      <p className="text-primary">{full_name}</p>
-                    </div>
-                  </Col>
-                  <Col lg="6">
-                    <div>
-                      <p className="text-secondary">تلفن:</p>
-                      <p className="text-primary">{phone}</p>
-                    </div>
-                  </Col>
-                </Row>
-              </Card.Body>
-            </Card>
-            <Card className="mt-5 p-2">
-              <Card.Text className="text-center" style={{ fontSize: "20px" }}>
-                <FaPhone
-                  className="mx-1 text-primary"
-                  style={{ fontSize: "13px" }}
-                />
-                فرم بازخورد تماس
-              </Card.Text>
-              <Card.Body>
-                <p className="text-secondary" style={{ fontSize: "17px" }}>
-                  وضعیت تماس
-                </p>
-                <Row className="text-center">
-                  {callStatus.map((item) => (
-                    <Col lg="3" key={item.id}>
-                      <Button
-                        variant={item.variant}
-                        className="mt-4"
-                        onClick={() => handleShowResult(item.id)}
-                      >
-                        {item.value}
-                      </Button>
-                    </Col>
-                  ))}
-                </Row>
-                {showResult ? (
-                  <div className="mt-4">
-                    <p className="text-secondary" style={{ fontSize: "17px" }}>
-                      نتیجه تماس
-                    </p>
-                    <Row className="text-center">
-                      {callResult.map((result) => (
-                        <Col lg="4" key={result.id}>
-                          <Button
-                            variant={result.variant}
-                            className="mt-2"
-                            onClick={() => handleIdColor(result.id)}
-                          >
-                            {result.value}
-                          </Button>
-                        </Col>
-                      ))}
-                    </Row>
-                  </div>
-                ) : (
-                  ""
-                )}
-                {questionsData.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-secondary" style={{ fontSize: "17px" }}>
-                      سوالات پروژه
-                    </p>
-                    {questionsData.map((qData, qIndex) => (
-                      <div
-                        key={qData.id || qIndex}
-                        className="mb-3 p-3 border rounded"
-                      >
-                        <h6 className="text-primary mb-2">
-                          سوال {qIndex + 1}: {qData.text}
-                        </h6>
-                        <div className="ms-4">
-                          {qData.answers && qData.answers.length > 0 ? (
-                            qData.answers.map((answer, aIndex) => (
-                              <div key={answer.id || aIndex} className="mb-1">
-                                <Form.Check
-                                  inline
-                                  type="radio"
-                                  name={`question-${qData.id}`}
-                                  id={`answer-${answer.id}`}
-                                  checked={selectedAnswers[qData.id] === answer.id}
-                                  onChange={() => handleAnswerChange(qData.id, answer.id)}
-                                />
-                                <span className="mx-1">{answer.text}</span>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-muted">
-                              هیچ پاسخی تعریف نشده است.
-                            </p>
-                          )}
-                        </div>
+        {loading ? (
+          <div className="text-center py-5 my-5">
+            <Spinner animation="border" variant="primary" size="lg" />
+            <p className="mt-3 text-muted fs-5">
+              در حال بارگذاری فرم بازخورد...
+            </p>
+          </div>
+        ) : (
+          <Card className="mt-5 mb-3">
+            <Card.Body>
+              <Card className="mt-3 p-2">
+                <Card.Text className="text-center" style={{ fontSize: "20px" }}>
+                  <FaUser
+                    className="mx-1 text-primary"
+                    style={{ fontSize: "13px" }}
+                  />
+                  خلاصه اطلاعات مخاطب
+                </Card.Text>
+                <Card.Body>
+                  <Row className="text-center">
+                    <Col lg="6">
+                      <div>
+                        <p className="text-secondary">نام و نام خانوادگی:</p>
+                        <p className="text-primary">{full_name}</p>
                       </div>
+                    </Col>
+                    <Col lg="6">
+                      <div>
+                        <p className="text-secondary">تلفن:</p>
+                        <p className="text-primary">{phone}</p>
+                      </div>
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+
+              <Card className="mt-5 p-2">
+                <Card.Text className="text-center" style={{ fontSize: "20px" }}>
+                  <FaPhone
+                    className="mx-1 text-primary"
+                    style={{ fontSize: "13px" }}
+                  />
+                  فرم بازخورد تماس
+                </Card.Text>
+                <Card.Body>
+                  <p className="text-secondary" style={{ fontSize: "17px" }}>
+                    وضعیت تماس
+                  </p>
+                  <Row className="text-center">
+                    {callStatus.map((item) => (
+                      <Col lg="3" key={item.id}>
+                        <Button
+                          variant={item.variant}
+                          className="mt-4"
+                          onClick={() => handleShowResult(item.id)}
+                        >
+                          {item.value}
+                        </Button>
+                      </Col>
                     ))}
+                  </Row>
+
+                  {showResult ? (
+                    <div className="mt-4">
+                      <p
+                        className="text-secondary"
+                        style={{ fontSize: "17px" }}
+                      >
+                        نتیجه تماس
+                      </p>
+                      <Row className="text-center">
+                        {callResult.map((result) => (
+                          <Col lg="4" key={result.id}>
+                            <Button
+                              variant={result.variant}
+                              className="mt-2"
+                              onClick={() => handleIdColor(result.id)}
+                            >
+                              {result.value}
+                            </Button>
+                          </Col>
+                        ))}
+                      </Row>
+                    </div>
+                  ) : (
+                    ""
+                  )}
+
+                  {questionsData.length > 0 && (
+                    <div className="mt-4">
+                      <p
+                        className="text-secondary"
+                        style={{ fontSize: "17px" }}
+                      >
+                        سوالات پروژه
+                      </p>
+                      {questionsData.map((qData, qIndex) => (
+                        <div
+                          key={qData.id || qIndex}
+                          className="mb-3 p-3 border rounded"
+                        >
+                          <h6 className="text-primary mb-2">
+                            سوال {qIndex + 1}: {qData.text}
+                          </h6>
+                          <div className="ms-4">
+                            {qData.answers && qData.answers.length > 0 ? (
+                              qData.answers.map((answer, aIndex) => (
+                                <div key={answer.id || aIndex} className="mb-1">
+                                  <Form.Check
+                                    inline
+                                    type="radio"
+                                    name={`question-${qData.id}`}
+                                    id={`answer-${answer.id}`}
+                                    checked={
+                                      selectedAnswers[qData.id] === answer.id
+                                    }
+                                    onChange={() =>
+                                      handleAnswerChange(qData.id, answer.id)
+                                    }
+                                  />
+                                  <span className="mx-1">{answer.text}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-muted">
+                                هیچ پاسخی تعریف نشده است.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <Form onSubmit={handleSubmit} className="mt-4">
+                    <Form.Group>
+                      <Form.Label>یادداشت‌ها و توضیحات</Form.Label>
+                      <Form.Control
+                        type="text"
+                        as="textarea"
+                        rows={4}
+                        value={explain}
+                        onChange={(event) => setExplain(event.target.value)} // فقط این خط اصلاح شد
+                        placeholder="توضیحات و یادداشت‌های اضافی خود را درج کنید..."
+                      />
+                    </Form.Group>
+                  </Form>
+
+                  <div className="mt-4">
+                    <Button
+                      variant="secondary"
+                      onClick={() => navigate(`/project/${id}/call-request`)}
+                    >
+                      انصراف
+                    </Button>
+                    <Button
+                      variant="primary"
+                      className="mx-3"
+                      onClick={handlePostInfo}
+                    >
+                      ثبت بازخورد
+                    </Button>
                   </div>
-                )}
-                <Form onSubmit={handleSubmit} className="mt-4">
-                  <Form.Group>
-                    <Form.Label>یادداشت‌ها و توضیحات</Form.Label>
-                    <Form.Control
-                      type="text"
-                      as="textarea"
-                      rows={4}
-                      value={explain}
-                      onChange={(event) => setExplain(event.target.target)}
-                      placeholder="توضیحات و یادداشت‌های اضافی خود را درج کنید..."
-                    />
-                  </Form.Group>
-                </Form>
-                <div className="mt-4">
-                  <Button
-                    variant="secondary"
-                    onClick={() => navigate(`/project/${id}/call-request`)}
-                  >
-                    انصراف
-                  </Button>
-                  <Button
-                    variant="primary"
-                    className="mx-3"
-                    onClick={handlePostInfo}
-                  >
-                    ثبت بازخورد
-                  </Button>
-                </div>
-              </Card.Body>
-            </Card>
-          </Card.Body>
-        </Card>
+                </Card.Body>
+              </Card>
+            </Card.Body>
+          </Card>
+        )}
       </Container>
     </>
   );
